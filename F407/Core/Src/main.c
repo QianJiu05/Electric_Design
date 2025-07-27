@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32f4xx_hal_adc.h"
+#include "arm_math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,6 +62,7 @@ static void MX_TIM8_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -119,9 +121,9 @@ int main(void)
   HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_3);
   HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_3); // CH3N互补
 
-  //计时器启动，tim2在apb1上，84mhz
+  /*计时器启动*/
   HAL_TIM_Base_Start_IT(&htim2);
-  // 启动ADC DMA，假设ADC1，缓冲区长度为5
+  /*启动ADC DMA*/
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_dma_buffer, ADC_CHANNEL_NUM);
 
   /* USER CODE END 2 */
