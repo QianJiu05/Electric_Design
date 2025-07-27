@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "stm32f4xx_hal_adc.h"
 #include "arm_math.h"
+#include "PID.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,7 +33,13 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+    /* PID para*/
+#define AUTO_RELOAD_VALUE 1679
+#define MAX_OUTPUT 100.f
+#define MIN_OUTPUT 0.0f
+    /* ADC para*/
 #define ADC_CHANNEL_NUM 11
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,11 +52,12 @@ ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
 TIM_HandleTypeDef htim1;
-TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim2;//用于定时执行任务
 TIM_HandleTypeDef htim8;
 
 /* USER CODE BEGIN PV */
 uint16_t adc_dma_buffer[ADC_CHANNEL_NUM];
+struct node node[5];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -580,6 +588,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     /*ADC handle*/
 
     /*set pwm*/
+    // Set_PWM_Duty()
     
   }
 

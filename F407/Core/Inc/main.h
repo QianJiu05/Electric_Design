@@ -36,6 +36,10 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+struct node{
+  float votage;
+  float current;
+};
 
 /* USER CODE END ET */
 
