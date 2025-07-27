@@ -58,6 +58,15 @@ TIM_HandleTypeDef htim8;
 /* USER CODE BEGIN PV */
 uint16_t adc_dma_buffer[ADC_CHANNEL_NUM];
 struct node node[5];
+
+PID_TypeDef pid_control[5] = {
+  {0.1,100,0,0,1,0},
+  {0.1,100,0,0,1,0},
+  {0.1,100,0,0,1,0},
+  {0.1,100,0,0,1,0},
+  {0.1,100,0,0,1,0}
+};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/

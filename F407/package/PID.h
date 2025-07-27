@@ -5,6 +5,12 @@
 #ifndef PID_H
 #define PID_H
 
+#define PID_TIM1_CH1 0
+#define PID_TIM1_CH2 1
+#define PID_TIM1_CH3 2
+#define PID_TIM8_CH2 3
+#define PID_TIM8_CH3 4
+
 typedef enum {
     MODE_CV, // 恒压
     MODE_CC  // 恒流
