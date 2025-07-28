@@ -4,6 +4,7 @@
 
 #ifndef SINGLEPHASE_RECTIFIER_H
 #define SINGLEPHASE_RECTIFIER_H
+
 typedef struct DIS_2ORDER_TF_COEF_TAG {
     float gain;
     float B0;
@@ -50,18 +51,15 @@ typedef struct SOGI_PLL_DATA_STRUCT_TAG
     float spll_integrator;
     float spll_freq_min_limt;
     float spp_freq_max_limt;
+
+    arm_pid_instance_f32 pid;
 }SOGI_PLL_DATA_DEF;
 
-typedef struct {
-    arm_biquad_casd_df1_inst_f32 bq_inst;  // 官方实例
-    float32_t coeffs[5];                   // {b0,b1,b2,-a1,-a2}
-    float32_t state[4];                    // 4 个状态变量
-} SOGI_BQ_DEF;
 
-// void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float grid_freq, float ts);
+void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t ts);
+// float32_t discrete_2order_tf(const float32_t input, DIS_2ORDER_TF_COEF_DEF *coeff, DIS_2ORDER_TF_DATA_DEF *data);
+void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_volt_sen);
 
-void sogi_pll_init(void);
-void spll_sogi_func(SOGI_PLL_DATA_DEF *s, float grid);
 
 
 
