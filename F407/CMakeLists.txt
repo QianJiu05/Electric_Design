@@ -49,28 +49,11 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
-include_directories(
-        Core/Inc
-        Drivers/STM32F4xx_HAL_Driver/Inc
-        Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
-        Drivers/CMSIS/Device/ST/STM32F4xx/Include
-        Drivers/CMSIS/Include
-        package
-)
+include_directories(Core/Inc Drivers/STM32F4xx_HAL_Driver/Inc Drivers/STM32F4xx_HAL_Driver/Inc/Legacy Drivers/CMSIS/Device/ST/STM32F4xx/Include Drivers/CMSIS/Include package Middlewares/ST/ARM/DSP/Inc)
 
-add_definitions(
-        -DDEBUG
-        -DUSE_HAL_DRIVER
-        -DSTM32F407xx
-        -DARM_MATH_CM4
-)
+add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32F407xx -DARM_MATH_CM4)
 
-file(GLOB_RECURSE SOURCES
-        "Core/*.*"
-        "Drivers/*.*"
-        "package/*.*"
-)
-
+file(GLOB_RECURSE SOURCES "Core/*.*" "Drivers/*.*" "package/*.*")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32F407VETX_FLASH.ld)
 
@@ -78,7 +61,11 @@ add_link_options(-Wl,-gc-sections,--print-memory-usage,-Map=${PROJECT_BINARY_DIR
 add_link_options(-mcpu=cortex-m4 -mthumb -mthumb-interwork)
 add_link_options(-T ${LINKER_SCRIPT})
 
+link_directories(${CMAKE_SOURCE_DIR}/Middlewares/ST/ARM/DSP/Lib)
+
 add_executable(${PROJECT_NAME}.elf ${SOURCES} ${LINKER_SCRIPT})
+
+target_link_libraries(${PROJECT_NAME}.elf libarm_cortexM4lf_math.a)
 
 set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
 set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
