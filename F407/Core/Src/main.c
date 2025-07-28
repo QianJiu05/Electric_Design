@@ -34,6 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define  float float32_t
 
 
 /* USER CODE END PD */
@@ -63,6 +64,8 @@ PID_TypeDef pid_control[5] = {
   {0.1,100,0,0,1,0}
 };
 
+uint16_t adc_dma_buffer[ADC_CHANNEL_NUM];
+SOGI_PLL_DATA_DEF spll_data;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -119,7 +122,8 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  uint16_t adc_dma_buffer[ADC_CHANNEL_NUM];
+
+
 
   /*启动PWM输出*/
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -139,6 +143,8 @@ int main(void)
   /*启动ADC DMA*/
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_dma_buffer, ADC_CHANNEL_NUM);
 
+
+  sogi_pll_init(&spll_data,GRID_FREQ,TS);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -590,9 +596,34 @@ static void MX_GPIO_Init(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2) {
-    /*ADC handle*/
+    /* ADC handle */
 
-    /*set pwm*/
+    /* SOGI-PLL */
+    // float32_t grid_voltage = read_adc_voltage(); // 假设从 ADC 读取电压
+    // spll_sogi_func(&spll_data, grid_voltage);
+    //
+    // float32_t phase_rad = spll_data.theta;      // 当前相位（弧度）
+    // float32_t frequency = spll_data.pll_freq_out; // 估计频率（Hz）
+    //
+    // float32_t sin_wave = arm_sin_f32(spll_data.theta); // 使用 ARM 优化函数
+    // float32_t cos_wave = spll_data.cos_theta;          // 直接读取已计算的值
+    //
+    // / 每 10 个 PWM 周期采样一次电压（降低计算负载）
+    // static uint8_t adc_sample_cnt;
+    // if (adc_sample_cnt++ % 10 == 0) {
+    //   float32_t voltage = ADC_Read() * VOLTAGE_SCALE; // 读取并标定电压
+    //   spll_sogi_func(&spll_data, voltage);
+    // }
+    //
+    // // 使用 PLL 输出的相位生成电流参考信号
+    // float32_t ref_current = 5.0f * spll_data.sin_theta; // 假设 5A 幅值
+    //
+    //
+
+
+    /* set pwm */
+    // set_pwm_current(ref_current); // 更新 PWM 输出
+
     // Set_PWM_Duty()
     
   }

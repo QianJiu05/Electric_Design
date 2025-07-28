@@ -28,6 +28,7 @@ typedef struct {
     PID_TypeDef voltage_pid;
     PID_TypeDef current_pid;
 } DCDC_Channel;
+
 extern DCDC_Channel dcdc_ch1, dcdc_ch2;
 
 float PID_Calc(PID_TypeDef *pid, float feedback);

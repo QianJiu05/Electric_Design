@@ -1,7 +1,6 @@
 #include "arm_math.h"
 #include "singlephase_rectifier.h"
 /* SCB->CPACR |= (0xFUL << 20);   /* 使能 CP10/CP11，开启FPU */
-#define  float float32_t
 
 /*
 *   如果还想再压榨 10 %，可把 arm_sin_f32 / arm_cos_f32 换成查表 + 线性插值（自己建 256 点表即可）。
@@ -38,7 +37,7 @@
 
 
 
-SOGI_PLL_DATA_DEF spll_data;
+
 
 
 void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t ts)
