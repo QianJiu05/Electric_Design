@@ -53,7 +53,7 @@ include_directories(Core/Inc Drivers/STM32F4xx_HAL_Driver/Inc Drivers/STM32F4xx_
 
 add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32F407xx -DARM_MATH_CM4)
 
-file(GLOB_RECURSE SOURCES "Core/*.*" "Drivers/*.*" "package/*.*")
+file(GLOB_RECURSE SOURCES "Core/*.*" "Drivers/*.*" "package/*.*" "Middlewares/*.*")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32F407VETX_FLASH.ld)
 

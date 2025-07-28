@@ -5,8 +5,9 @@
 
 /*
 *   如果还想再压榨 10 %，可把 arm_sin_f32 / arm_cos_f32 换成查表 + 线性插值（自己建 256 点表即可）。
-    若使用双通道 SOGI（锁三相），可把 Biquad 改成 arm_biquad_cascade_df1_f32 的 2-stage 版，一次处理 2 路信号，减少函数调用开销。
     把 value_2pi 改成 6.283185307f，避免 2.0f*3.1415926 每次乘法。
+    mdk-armcc效率比arm-gcc高
+    gcc -ofast
  *
  */
 #define FSW 20000.0f
