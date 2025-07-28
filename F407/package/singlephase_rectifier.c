@@ -1,10 +1,16 @@
 
-#include "math.h"
+// #include "math.h"直接替换成arm math
 #include "arm_math.h"
 #include "singlephase_rectifier.h"
 /* SCB->CPACR |= (0xFUL << 20);   /* 使能 CP10/CP11，开启FPU */
 #define  float float
 
+/*
+*   如果还想再压榨 10 %，可把 arm_sin_f32 / arm_cos_f32 换成查表 + 线性插值（自己建 256 点表即可）。
+    若使用双通道 SOGI（锁三相），可把 Biquad 改成 arm_biquad_cascade_df1_f32 的 2-stage 版，一次处理 2 路信号，减少函数调用开销。
+    记得把 value_2pi 改成 6.283185307f，避免 2.0f*3.1415926 每次乘法。
+ *
+ */
 #define FSW 20e3
 
 #define ssrf_ts             1/FSW
@@ -12,7 +18,8 @@
 #define sser_ki             0.006f
 #define ssrf_up_limt        63
 #define ssrf_low_limt       43
-#define value_2pi           2.0f * 3.1415926
+// #define value_2pi           2.0f * 3.1415926
+#define value_2pi           6.283185307f
 
 //[0.003405429629029,0,-0.003405429629029]
 //[0.010982881827120,0,-0.010982881827120]
@@ -43,83 +50,57 @@
 //
 
 
-SOGI_PLL_DATA_DEF spll_data;
+// SOGI_PLL_DATA_DEF spll_data;
 
-// Function description :
-void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float grid_freq, float ts)
+SOGI_BQ_DEF sogi_u, sogi_qu;
+
+
+static inline void sogi_bq_init(SOGI_BQ_DEF *s,
+                                float32_t b0, float32_t b1, float32_t b2,
+                                float32_t a1, float32_t a2)
 {
-    spll_obj->grid_freq = grid_freq;
-    spll_obj->delta_t = ts;
-
-    spll_obj->sogi_u_coeff.gain = SIGO_U_GAIN;
-    spll_obj->sogi_u_coeff.B0 = SIGO_U_B0;
-    spll_obj->sogi_u_coeff.B1 = SIGO_U_B1;
-    spll_obj->sogi_u_coeff.B2 = SIGO_U_B2;
-
-    spll_obj->sogi_u_coeff.A1 = SIGO_U_A1;
-    spll_obj->sogi_u_coeff.A2 = SIGO_U_A2;
-
-    spll_obj->sogi_qu_coeff.gain = SIGO_QU_GAIN;
-    spll_obj->sogi_qu_coeff.B0 = SIGO_QU_B0;
-    spll_obj->sogi_qu_coeff.B1 = SIGO_QU_B1;
-    spll_obj->sogi_qu_coeff.B2 = SIGO_QU_B2;
-
-    spll_obj->sogi_qu_coeff.A1 = SIGO_QU_A1;
-    spll_obj->sogi_qu_coeff.A2 = SIGO_QU_A2;
-
-    spll_obj->spll_kp = ssrf_kp;
-    spll_obj->spll_ki = sser_ki;
-    spll_obj->spp_freq_max_limt = ssrf_up_limt;
-    spll_obj->spll_freq_min_limt = ssrf_low_limt;
+    s->coeffs[0] = b0; s->coeffs[1] = b1; s->coeffs[2] = b2;
+    s->coeffs[3] = -a1; s->coeffs[4] = -a2;   // 注意符号
+    arm_biquad_cascade_df1_init_f32(&s->bq_inst, 1, s->coeffs, s->state);
 }
 
-//sogi_pll_init(&spll_data, 50.0, ssrf_ts);
-
-
-float  discrete_2order_tf(const float input, DIS_2ORDER_TF_COEF_DEF *coeff, DIS_2ORDER_TF_DATA_DEF *data)
+void sogi_pll_init(void)
 {
-    // w0 = x(0) - A1 * W1 - A2 * W2
-    data->w0 = input - coeff->A1 * data->w1 - coeff->A2 * data->w2;
-
-    // Y(0) = Gain * (B0 * W0 + B1 * W1 + B2 * W2)
-    data->output = coeff->gain * (coeff->B0 * data->w0 + coeff->B1 * data->w1 + coeff->B2 * data->w2);
-
-    data->w2 = data->w1;
-    data->w1 = data->w0;
-
-    return(data->output);
+    // ...
+    /* SOGI-U */
+    sogi_bq_init(&sogi_u,
+                 SIGO_U_B0, SIGO_U_B1, SIGO_U_B2,
+                 SIGO_U_A1, SIGO_U_A2);
+    /* SOGI-QU */
+    sogi_bq_init(&sogi_qu,
+                 SIGO_QU_B0, SIGO_QU_B1, SIGO_QU_B2,
+                 SIGO_QU_A1, SIGO_QU_A2);
 }
 
 
-// sogo pll
-void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float grid_volt_sen)
+static inline float32_t sogi_bq_run(SOGI_BQ_DEF *s, float32_t in)
 {
-    // signal genertor
-    spll_obj->ac_u = discrete_2order_tf(grid_volt_sen, &(spll_obj->sogi_u_coeff), &(spll_obj->sogi_u_data));
-    spll_obj->ac_qu = discrete_2order_tf(grid_volt_sen, &(spll_obj->sogi_qu_coeff), &(spll_obj->sogi_qu_data));
+    float32_t out;
+    arm_biquad_cascade_df1_f32(&s->bq_inst, &in, &out, 1);
+    return out;
+}
 
-    // Park transfrom from alpha beta tp d-q axis
-    spll_obj->u_d =  spll_obj->ac_u * spll_obj->cos_theta + spll_obj->ac_qu * spll_obj->sin_theta;
-    spll_obj->u_q = -spll_obj->ac_u * spll_obj->sin_theta + spll_obj->ac_qu * spll_obj->cos_theta;
+void spll_sogi_func(SOGI_PLL_DATA_DEF *s, float grid)
+{
+    s->ac_u  = sogi_bq_run(&sogi_u,  grid);
+    s->ac_qu = sogi_bq_run(&sogi_qu, grid);
 
-    // pi ctrol q to 0
-    spll_obj->spll_diff = 0 - spll_obj->u_d;
+    /* Park 变换 */
+    s->u_d =  s->ac_u * arm_cos_f32(s->theta) + s->ac_qu * arm_sin_f32(s->theta);
+    s->u_q = -s->ac_u * arm_sin_f32(s->theta) + s->ac_qu * arm_cos_f32(s->theta);
 
-    spll_obj->spll_integrator += spll_obj->spll_diff * spll_obj->spll_ki;
+    /* PI 控制 */
+    s->spll_diff = -s->u_q;
+    s->spll_integrator += s->spll_diff * s->spll_ki;
+    s->pll_freq_out = s->spll_diff * s->spll_kp + s->spll_integrator;
 
-    spll_obj->pll_freq_out = spll_obj->spll_diff * spll_obj->spll_kp + spll_obj->spll_integrator;
-
-    spll_obj->theta -= (spll_obj->pll_freq_out+0.5f) * value_2pi * spll_obj->delta_t;
-
-    if(spll_obj->theta > value_2pi)
-    {
-        spll_obj->theta -= value_2pi;
-    }
-    else if (spll_obj->theta < 0)
-    {
-        spll_obj->theta += value_2pi;
-    }
-
-    spll_obj->cos_theta = cos(spll_obj->theta);
-    spll_obj->sin_theta = sin(spll_obj->theta);
+    /* 相位积分 */
+    s->theta -= (s->pll_freq_out + 0.5f) * value_2pi * s->delta_t;
+    if (s->theta > value_2pi) s->theta -= value_2pi;
+    else if (s->theta < 0)       s->theta += value_2pi;
 }

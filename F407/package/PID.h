@@ -1,9 +1,8 @@
-//
-// Created by 24158 on 25-7-6.
-//
 
 #ifndef PID_H
 #define PID_H
+
+#include "main.h"
 
 #define PID_TIM1_CH1 0
 #define PID_TIM1_CH2 1

@@ -52,8 +52,18 @@ typedef struct SOGI_PLL_DATA_STRUCT_TAG
     float spp_freq_max_limt;
 }SOGI_PLL_DATA_DEF;
 
-void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float grid_freq, float ts);
-float  discrete_2order_tf(const float input, DIS_2ORDER_TF_COEF_DEF *coeff, DIS_2ORDER_TF_DATA_DEF *data);
-void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float grid_volt_sen);
+typedef struct {
+    arm_biquad_casd_df1_inst_f32 bq_inst;  // 官方实例
+    float32_t coeffs[5];                   // {b0,b1,b2,-a1,-a2}
+    float32_t state[4];                    // 4 个状态变量
+} SOGI_BQ_DEF;
+
+// void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float grid_freq, float ts);
+
+void sogi_pll_init(void);
+void spll_sogi_func(SOGI_PLL_DATA_DEF *s, float grid);
+
+
+
 
 #endif //SINGLEPHASE_RECTIFIER_H

@@ -34,12 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-    /* PID para*/
-#define AUTO_RELOAD_VALUE 1679
-#define MAX_OUTPUT 100.f
-#define MIN_OUTPUT 0.0f
-    /* ADC para*/
-#define ADC_CHANNEL_NUM 11
+
 
 /* USER CODE END PD */
 
