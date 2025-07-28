@@ -8,7 +8,7 @@
 /*
 *   如果还想再压榨 10 %，可把 arm_sin_f32 / arm_cos_f32 换成查表 + 线性插值（自己建 256 点表即可）。
     若使用双通道 SOGI（锁三相），可把 Biquad 改成 arm_biquad_cascade_df1_f32 的 2-stage 版，一次处理 2 路信号，减少函数调用开销。
-    记得把 value_2pi 改成 6.283185307f，避免 2.0f*3.1415926 每次乘法。
+    把 value_2pi 改成 6.283185307f，避免 2.0f*3.1415926 每次乘法。
  *
  */
 #define FSW 20e3
@@ -45,15 +45,10 @@
 #define SIGO_QU_A1    -1.977790221205283
 #define SIGO_QU_A2     0.978034236345759
 
-//
-//Const data define
-//
-
 
 // SOGI_PLL_DATA_DEF spll_data;
 
 SOGI_BQ_DEF sogi_u, sogi_qu;
-
 
 static inline void sogi_bq_init(SOGI_BQ_DEF *s,
                                 float32_t b0, float32_t b1, float32_t b2,
@@ -83,6 +78,21 @@ static inline float32_t sogi_bq_run(SOGI_BQ_DEF *s, float32_t in)
     float32_t out;
     arm_biquad_cascade_df1_f32(&s->bq_inst, &in, &out, 1);
     return out;
+}
+
+static inline void sogi_bq_run_pair(SOGI_BQ_DEF *s,
+                                    float32_t  in,
+                                    float32_t *u,
+                                    float32_t *qu)
+{
+    /* 1. 先算 u(α) */
+    *u = sogi_bq_run(s, in);
+
+    /* 2. 再用差分公式得到 qu(β)：
+       qu = (u_prev - u_now) * k
+       k = 1 / (ω0 * Ts)  由系数推导出 ≈ 1/0.006 ≈ 166.7
+       但更简单：qu = w1（状态变量 w1 就是正交输出）        */
+    *qu = s->state[1];   /* w1 就是正交分量 */
 }
 
 void spll_sogi_func(SOGI_PLL_DATA_DEF *s, float grid)
