@@ -56,12 +56,10 @@ TIM_HandleTypeDef htim8;
 uint16_t adc_dma_buffer[ADC_CHANNEL_NUM];
 struct node node[5];
 
-PID_TypeDef pid_control[5] = {
+PID_TypeDef pid_control[3] = {
   {0.1,100,0,0,1,0},
   {0.1,100,0,0,1,0},
   {0.1,100,0,0,1,0},
-  {0.1,100,0,0,1,0},
-  {0.1,100,0,0,1,0}
 };
 
 uint16_t adc_dma_buffer[ADC_CHANNEL_NUM];
@@ -144,7 +142,7 @@ int main(void)
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_dma_buffer, ADC_CHANNEL_NUM);
 
 
-  sogi_pll_init(&spll_data,GRID_FREQ,TS);
+  sogi_pll_init(&spll_data,50*value_2pi,ssrf_ts);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -602,29 +600,29 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     // float32_t grid_voltage = read_adc_voltage(); // 假设从 ADC 读取电压
     // spll_sogi_func(&spll_data, grid_voltage);
     //
-    // float32_t phase_rad = spll_data.theta;      // 当前相位（弧度）
-    // float32_t frequency = spll_data.pll_freq_out; // 估计频率（Hz）
+    float32_t phase_rad = spll_data.theta;      // 当前相位（弧度）
+    float32_t frequency = spll_data.pll_freq_out; // 估计频率（Hz）
     //
-    // float32_t sin_wave = arm_sin_f32(spll_data.theta); // 使用 ARM 优化函数
-    // float32_t cos_wave = spll_data.cos_theta;          // 直接读取已计算的值
+    float32_t sin_wave = arm_sin_f32(spll_data.theta); // 使用 ARM 优化函数
+    float32_t cos_wave = spll_data.cos_theta;          // 直接读取已计算的值
     //
     // / 每 10 个 PWM 周期采样一次电压（降低计算负载）
     // static uint8_t adc_sample_cnt;
     // if (adc_sample_cnt++ % 10 == 0) {
     //   float32_t voltage = ADC_Read() * VOLTAGE_SCALE; // 读取并标定电压
-    //   spll_sogi_func(&spll_data, voltage);
+    // spll_sogi_func(&spll_data, voltage);
     // }
-    //
     // // 使用 PLL 输出的相位生成电流参考信号
     // float32_t ref_current = 5.0f * spll_data.sin_theta; // 假设 5A 幅值
-    //
-    //
+
+    //run_spll_arm_f32
+
+
+
 
 
     /* set pwm */
-    // set_pwm_current(ref_current); // 更新 PWM 输出
 
-    // Set_PWM_Duty()
     
   }
 
