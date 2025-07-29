@@ -71,6 +71,9 @@ void Error_Handler(void);
 #define MIN_OUTPUT 0.0f
   /* ADC para*/
 #define ADC_CHANNEL_NUM 13
+// #define
+#define CHANNEL_REF 12
+
 
 /* USER CODE END Private defines */
 

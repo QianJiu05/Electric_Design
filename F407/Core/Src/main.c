@@ -58,10 +58,12 @@ UART_HandleTypeDef huart2;
 uint16_t adc_dma_buffer[ADC_CHANNEL_NUM];
 struct node node[5];
 
-PID_TypeDef pid_control[3] = {
+PID_TypeDef pid_control[5] = {
   {0.1,100,0,0,1,0},
   {0.1,100,0,0,1,0},
   {0.1,100,0,0,1,0},
+{0.1,100,0,0,1,0},
+{0.1,100,0,0,1,0},
 };
 
 uint16_t adc_dma_buffer[ADC_CHANNEL_NUM];
@@ -123,9 +125,6 @@ int main(void)
   MX_TIM2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
-
-
 
   /*启动PWM输出*/
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
