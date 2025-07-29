@@ -70,7 +70,7 @@ void Error_Handler(void);
 #define MAX_OUTPUT 100.f
 #define MIN_OUTPUT 0.0f
   /* ADC para*/
-#define ADC_CHANNEL_NUM 11
+#define ADC_CHANNEL_NUM 13
 
 /* USER CODE END Private defines */
 
