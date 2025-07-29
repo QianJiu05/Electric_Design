@@ -97,7 +97,7 @@ void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_volt_sen)
     arm_sin_cos_f32(spll_obj->theta * (180.0f / PI), &(spll_obj->sin_theta), &(spll_obj->cos_theta));
 }
 
-spll_sogi_func(&spll_data, vac_sen);
+// spll_sogi_func(&spll_data, vac_sen);
 
 /*
  * 原文件中与func关系协作完成 while1
