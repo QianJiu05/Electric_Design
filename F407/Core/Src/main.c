@@ -55,7 +55,10 @@ TIM_HandleTypeDef htim8;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint32_t adc_dma_buffer[ADC_CHANNEL_NUM];
+/* adc */
+static uint32_t adc_dma_buffer[ADC_CHANNEL_NUM];
+static uint32_t convert[ADC_CHANNEL_NUM - 1];
+
 struct node node[5];
 
 PID_TypeDef pid_control[5] = {
@@ -682,16 +685,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2) {
     /* ADC handle */
+    
+    // HAL_UART_Transmit(&huart2,(uint8_t*)&adc_dma_buffer[VREF],sizeof(uint32_t),HAL_MAX_DELAY);
 
     /* SOGI-PLL */
     // float32_t grid_voltage = read_adc_voltage(); // 假设从 ADC 读取电压
     // spll_sogi_func(&spll_data, grid_voltage);
     //
-    float32_t phase_rad = spll_data.theta;      // 当前相位（弧度）
-    float32_t frequency = spll_data.pll_freq_out; // 估计频率（Hz）
-    //
-    float32_t sin_wave = arm_sin_f32(spll_data.theta); // 使用 ARM 优化函数
-    float32_t cos_wave = spll_data.cos_theta;          // 直接读取已计算的值
+    // float32_t phase_rad = spll_data.theta;      // 当前相位（弧度）
+    // float32_t frequency = spll_data.pll_freq_out; // 估计频率（Hz）
+    // //
+    // float32_t sin_wave = arm_sin_f32(spll_data.theta); // 使用 ARM 优化函数
+    // float32_t cos_wave = spll_data.cos_theta;          // 直接读取已计算的值
     //
     // / 每 10 个 PWM 周期采样一次电压（降低计算负载）
     // static uint8_t adc_sample_cnt;

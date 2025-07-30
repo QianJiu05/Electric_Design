@@ -1,11 +1,9 @@
 #include "arm_math.h"
 #include "singlephase_rectifier.h"
-/* SCB->CPACR |= (0xFUL << 20);   /* 使能 CP10/CP11，开启FPU */
-
 /*
-*   如果还想再压榨 10 %，可把 arm_sin_f32 / arm_cos_f32 换成查表 + 线性插值（自己建 256 点表即可）。
-    mdk-armcc效率比arm-gcc高
-    gcc -ofast
+ *   如果还想再压榨 10 %，可把 arm_sin_f32 / arm_cos_f32 换成查表 + 线性插值（自己建 256 点表即可）。
+ *   mdk-armcc效率比arm-gcc高
+ *   gcc -ofast
  *
  */
 

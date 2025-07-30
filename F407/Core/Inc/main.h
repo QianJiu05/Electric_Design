@@ -70,9 +70,27 @@ void Error_Handler(void);
 #define MAX_OUTPUT 100.f
 #define MIN_OUTPUT 0.0f
   /* ADC para*/
-#define ADC_CHANNEL_NUM 15
-// #define
-#define CHANNEL_REF 12
+#define ADC_CHANNEL_NUM       16
+#define VREF                  15
+
+#define INPUT_CURRENT         1
+
+#define DC_OUT_VOLTAGE_1      2//DCAC OUTPUT
+#define DC_OUT_CURRENT_1      3
+#define DC_OUT_CURRENT_2      5
+#define DC_OUT_VOLTAGE_2      4
+#define DC_OUT_CURRENT_3      0
+#define DC_OUT_VOLTAGE_3      6
+
+#define AC_IN_VOLTAGE_1       (8 - 1)//ACDC INPUT
+#define AC_IN_CURRENT_1       (9 - 1)
+#define AC_IN_VOLTAGE_2       (10 - 1)
+#define AC_IN_CURRENT_2       (11 - 1)
+#define AC_IN_VOLTAGE_3       (12 - 1)
+#define AC_IN_CURRENT_3       (13 - 1)
+
+#define CURRENT_REF_CURRENT   (14 - 1)
+#define CURRENT_REF_VOLTAGE   (15 - 1)
 
 
 /* USER CODE END Private defines */
