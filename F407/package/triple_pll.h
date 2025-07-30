@@ -2,8 +2,8 @@
 // Created by 32114 on 25-7-27.
 //
 
-#ifndef SINGLEPHASE_RECTIFIER_H
-#define SINGLEPHASE_RECTIFIER_H
+#ifndef TRIPLE_PLL_H
+#define TRIPLE_PLL_H
 
 #define FSW 20000.0f
 

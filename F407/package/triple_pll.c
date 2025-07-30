@@ -1,12 +1,11 @@
 #include "arm_math.h"
-#include "singlephase_rectifier.h"
+#include "triple_pll.h"
 /*
  *   如果还想再压榨 10 %，可把 arm_sin_f32 / arm_cos_f32 换成查表 + 线性插值（自己建 256 点表即可）。
  *   mdk-armcc效率比arm-gcc高
  *   gcc -ofast
  *
  */
-
 void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t ts)
 {
     spll_obj->grid_freq = grid_freq;
@@ -87,26 +86,6 @@ void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_volt_sen)
     // Update trigonometric values using ARM optimized functions
     arm_sin_cos_f32(spll_obj->theta * (180.0f / PI), &(spll_obj->sin_theta), &(spll_obj->cos_theta));
 }
-
-// spll_sogi_func(&spll_data, vac_sen);
-
 /*
  * 原文件中与func关系协作完成 while1
  */
-// void run_spll_arm_f32(void)
-// {
-//     // float32_t vac_sen   = InputSignal(0, 0);
-//     // float32_t deta_theta = arm_cos_f32(InputSignal(0, 1));
-//
-//     spll_sogi_func_(&spll_data, vac_sen);   // 内部全部 float32
-//
-     // float32_t temp_theta = spll_data.theta - deta_theta;
-//
-//     /* 限幅到 0 .. 2π */
-//     while (temp_theta < 0.0f)         temp_theta += 2.0f * value_2pi;
-//     while (temp_theta > 2.0f * value_2pi)  temp_theta -= 2.0f * value_2pi;
-//
-//     // OutputSignal(0, 0) = temp_theta;
-//     // OutputSignal(0, 1) = spll_data.pll_freq_out;
-//     // OutputSignal(0, 2) = spll_data.spll_diff;
-// }
