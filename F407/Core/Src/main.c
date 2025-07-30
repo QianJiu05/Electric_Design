@@ -70,6 +70,7 @@ PID_TypeDef pid_control[5] = {
 };
 
 SOGI_PLL_DATA_DEF spll_data;
+PARK_TRANS park_trans;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -689,26 +690,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     // HAL_UART_Transmit(&huart2,(uint8_t*)&adc_dma_buffer[VREF],sizeof(uint32_t),HAL_MAX_DELAY);
 
     /* SOGI-PLL */
-    // float32_t grid_voltage = read_adc_voltage(); // 假设从 ADC 读取电压
-    // spll_sogi_func(&spll_data, grid_voltage);
-    //
-    // float32_t phase_rad = spll_data.theta;      // 当前相位（弧度）
-    // float32_t frequency = spll_data.pll_freq_out; // 估计频率（Hz）
-    // //
-    // float32_t sin_wave = arm_sin_f32(spll_data.theta); // 使用 ARM 优化函数
-    // float32_t cos_wave = spll_data.cos_theta;          // 直接读取已计算的值
-    //
-    // / 每 10 个 PWM 周期采样一次电压（降低计算负载）
-    // static uint8_t adc_sample_cnt;
-    // if (adc_sample_cnt++ % 10 == 0) {
-    //   float32_t voltage = ADC_Read() * VOLTAGE_SCALE; // 读取并标定电压
-    // spll_sogi_func(&spll_data, voltage);
-    // }
-    // // 使用 PLL 输出的相位生成电流参考信号
-    // float32_t ref_current = 5.0f * spll_data.sin_theta; // 假设 5A 幅值
 
-    //run_spll_arm_f32
+    /*
+    float va = InputSignal(0, 0);   // A 相
+    float vb = InputSignal(0, 1);   // B 相
+    float vc = InputSignal(0,2);   // C 相
 
+    // 2) 运行三相 SOGI-PLL
+    spll_sogi_func(&spll_data, va, vb, vc);
+
+    // 3) 输出结果
+    OutputSignal(0, 0) = spll_data.theta;          // 0 … 2π
+    OutputSignal(0, 1) = spll_data.pll_freq_out;   // Hz
+    OutputSignal(0, 2) = spll_data.u_q;            // PI 误差（调试用）
+
+    // park trans
+    park_transform(va, vb, vc, theta, &park_trans);
+
+
+    */
 
 
 

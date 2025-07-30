@@ -31,19 +31,24 @@ void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t t
     float32_t pidKi = sser_ki;
     float32_t pidKd = 0.0f;
 
-    spll_obj->pid.Kp = pidKp;
-    spll_obj->pid.Ki = pidKi;
-    spll_obj->pid.Kd = pidKd;
-    arm_pid_init_f32(&spll_obj->pid, 1);
+    // spll_obj->pid.Kp = pidKp;
+    // spll_obj->pid.Ki = pidKi;
+    // spll_obj->pid.Kd = pidKd;
+    // arm_pid_init_f32(&spll_obj->pid, 1);
 
     spll_obj->spp_freq_max_limt = ssrf_up_limt;
     spll_obj->spll_freq_min_limt = ssrf_low_limt;
 
+    /* α 通道 */
+    spll_obj->sogi_alpha_coeff = spll_obj->sogi_u_coeff;   // 直接复制即可
+    /* β 通道 */
+    spll_obj->sogi_beta_coeff  = spll_obj->sogi_u_coeff;
+
     // Initialize other variables
-    spll_obj->theta = 0.0f;
-    spll_obj->cos_theta = 1.0f;
-    spll_obj->sin_theta = 0.0f;
-    spll_obj->spll_integrator = 0.0f;
+    // spll_obj->theta = 0.0f;
+    // spll_obj->cos_theta = 1.0f;
+    // spll_obj->sin_theta = 0.0f;
+    // spll_obj->spll_integrator = 0.0f;
 }
 
 float32_t discrete_2order_tf(const float32_t input, DIS_2ORDER_TF_COEF_DEF *coeff, DIS_2ORDER_TF_DATA_DEF *data)
@@ -59,33 +64,53 @@ float32_t discrete_2order_tf(const float32_t input, DIS_2ORDER_TF_COEF_DEF *coef
 
     return data->output;
 }
-void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_volt_sen)
+void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t va, float32_t vb, float32_t vc)
 {
-    // Signal generator
-    spll_obj->ac_u = discrete_2order_tf(grid_volt_sen, &(spll_obj->sogi_u_coeff), &(spll_obj->sogi_u_data));
-    spll_obj->ac_qu = discrete_2order_tf(grid_volt_sen, &(spll_obj->sogi_qu_coeff), &(spll_obj->sogi_qu_data));
+    /* 1. Clarke 变换 -> α, β */
+    float valpha = va;
+    float vbeta  = (vb - vc) * 0.57735;   // 1/√3 ≈ 0.57735
+    /* 2. SOGI 产生正交信号 */
+    float u_alpha = discrete_2order_tf(valpha,
+                          &spll_obj->sogi_alpha_coeff,
+                          &spll_obj->sogi_alpha_data);
+    float u_beta  = discrete_2order_tf(vbeta,
+                          &spll_obj->sogi_beta_coeff,
+                          &spll_obj->sogi_beta_data);
 
-    // Park transform from alpha beta to d-q axis
-    spll_obj->u_d = spll_obj->ac_u * spll_obj->cos_theta + spll_obj->ac_qu * spll_obj->sin_theta;
-    spll_obj->u_q = -spll_obj->ac_u * spll_obj->sin_theta + spll_obj->ac_qu * spll_obj->cos_theta;
+    /* 3. Park 变换（用 SOGI 输出作为 αβ，再转到 dq） */
+    spll_obj->u_d =  u_alpha * spll_obj->cos_theta
+                   + u_beta  * spll_obj->sin_theta;
+    spll_obj->u_q = -u_alpha * spll_obj->sin_theta
+                   + u_beta  * spll_obj->cos_theta;
 
-    // PI control q to 0 - using ARM PID function
-    spll_obj->spll_diff = 0.0f - spll_obj->u_d;
-    spll_obj->pll_freq_out = arm_pid_f32(&spll_obj->pid, spll_obj->spll_diff);
+    // /* 4. 以下 PLL 部分完全不用改 */
+    spll_obj->spll_diff = 0.0f - spll_obj->u_q;   // 让 u_q → 0
 
-    // Update theta
-    spll_obj->theta -= (spll_obj->pll_freq_out + 0.5f) * value_2pi * spll_obj->delta_t;
+    spll_obj->spll_integrator += spll_obj->spll_diff * spll_obj->spll_ki;
 
+    spll_obj->pll_freq_out = spll_obj->spll_diff * spll_obj->spll_kp + spll_obj->spll_integrator;
+
+    /* 5. 角度更新 & 归一化 */
+    spll_obj->theta += spll_obj->pll_freq_out * value_2pi * spll_obj->delta_t;
     // Normalize theta to [0, 2π]
-    if (spll_obj->theta > value_2pi) {
-        spll_obj->theta -= value_2pi;
-    } else if (spll_obj->theta < 0) {
-        spll_obj->theta += value_2pi;
-    }
+    if (spll_obj->theta > value_2pi)    spll_obj->theta -= value_2pi;
+    else if (spll_obj->theta < 0)   spll_obj->theta += value_2pi;
 
-    // Update trigonometric values using ARM optimized functions
-    arm_sin_cos_f32(spll_obj->theta * (180.0f / PI), &(spll_obj->sin_theta), &(spll_obj->cos_theta));
+    // // pi ctrol q to 0
+    // spll_obj->spll_diff = 0 - spll_obj->u_d;
+
+    // spll_obj->theta -= (spll_obj->pll_freq_out+0.5f) * value_2pi * spll_obj->delta_t;
+
+    spll_obj->cos_theta = cos(spll_obj->theta);
+    spll_obj->sin_theta = sin(spll_obj->theta);
+
 }
 /*
  * 原文件中与func关系协作完成 while1
  */
+
+void park_transform(float32_t xa, float32_t xb, float32_t xc, float theta, PARK_TRANS *res)
+{
+    res->yd = (2.0/3.0)* (arm_cos_f32(theta)*xa + arm_cos_f32(theta - 2/3*M_PI)*xb + arm_cos_f32(theta + 2/3*M_PI)*xc);
+    res->yq = (2.0/3.0)* (-arm_sin_f32(theta)*xa - sin(theta-2/3*M_PI)*xb - sin(theta+2/3*M_PI)*xc);
+}

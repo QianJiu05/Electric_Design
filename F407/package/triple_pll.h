@@ -8,11 +8,10 @@
 #define FSW 20000.0f
 
 #define ssrf_ts             (1.0f/FSW)
-#define ssrf_kp             1.007f
-#define sser_ki             0.006f
+#define ssrf_kp             0.9f
+#define sser_ki             0.0001f
 #define ssrf_up_limt        63
 #define ssrf_low_limt       43
-// #define value_2pi           2.0f * 3.1415926
 #define value_2pi           6.283185307f
 
 #define SIGO_U_GAIN  1
@@ -23,7 +22,8 @@
 #define SIGO_U_A1   -1.977790221205283
 #define SIGO_U_A2    0.978034236345759
 
-#define SIGO_QU_GAIN  1.0e-03
+// #define SIGO_QU_GAIN  1.0e-03
+#define SIGO_QU_GAIN  0.001
 #define SIGO_QU_B0    0.08625935215831610
 #define SIGO_QU_B1    0.1725187043166322
 #define SIGO_QU_B2    0.08625935215831610
@@ -72,20 +72,31 @@ typedef struct SOGI_PLL_DATA_STRUCT_TAG
     DIS_2ORDER_TF_COEF_DEF  sogi_qu_coeff;
     DIS_2ORDER_TF_DATA_DEF  sogi_qu_data;
 
+    DIS_2ORDER_TF_DATA_DEF  sogi_alpha_data;
+    DIS_2ORDER_TF_DATA_DEF  sogi_beta_data;
+    DIS_2ORDER_TF_COEF_DEF  sogi_alpha_coeff;
+    DIS_2ORDER_TF_COEF_DEF  sogi_beta_coeff;
+
     float spll_kp;
     float spll_ki;
     float spll_integrator;
     float spll_freq_min_limt;
     float spp_freq_max_limt;
 
-    arm_pid_instance_f32 pid;
 }SOGI_PLL_DATA_DEF;
 
+//
+//  park struct
+//
+typedef struct park_trans {
+    float32_t yd;
+    float32_t yq;
+}PARK_TRANS;
 
 void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t ts);
-void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_volt_sen);
+void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t va, float32_t vb, float32_t vc);
 
-
+void park_transform(float32_t xa, float32_t xb, float32_t xc, float theta, PARK_TRANS *res);
 
 
 
