@@ -4,17 +4,10 @@
 
 /*
 *   如果还想再压榨 10 %，可把 arm_sin_f32 / arm_cos_f32 换成查表 + 线性插值（自己建 256 点表即可）。
-    把 value_2pi 改成 6.283185307f，避免 2.0f*3.1415926 每次乘法。
     mdk-armcc效率比arm-gcc高
     gcc -ofast
  *
  */
-
-
-
-
-
-
 
 void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t ts)
 {
