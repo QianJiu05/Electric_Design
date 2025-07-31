@@ -5,7 +5,7 @@
 float PID_Calc(PID_TypeDef *pid, float feedback) {
     float error = pid->setpoint - feedback;
     pid->integral += error;
-    pid->last_error = error;
+    // pid->last_error = error;
     float output = pid->Kp * error + pid->Ki * pid->integral;
     // 限幅
     if (output > MAX_OUTPUT) output = MAX_OUTPUT;

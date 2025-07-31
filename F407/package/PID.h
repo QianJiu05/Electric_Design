@@ -3,12 +3,18 @@
 #define PID_H
 
 #include "main.h"
+#define PID_CONTROL_NUM 6
 
 #define PID_TIM1_CH1 0
 #define PID_TIM1_CH2 1
 #define PID_TIM1_CH3 2
-#define PID_TIM8_CH2 3
-#define PID_TIM8_CH3 4
+#define PID_TIM8_CH1 3
+#define PID_TIM8_CH2 4
+#define PID_TIM8_CH3 5
+
+#define AC_CH1  PID_TIM8_CH1
+#define AC_CH2  PID_TIM8_CH2
+#define AC_CH3  PID_TIM8_CH3
 
 typedef enum {
     MODE_CV, // 恒压

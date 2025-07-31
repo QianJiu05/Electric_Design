@@ -36,11 +36,16 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-struct node{
-  float votage;
-  float current;
-};
 
+typedef struct TRIPLE_POWER {
+  float CURRENT_A;
+  float CURRENT_B;
+  float CURRENT_C;
+
+  float VOLTAGE_A;
+  float VOLTAGE_B;
+  float VOLTAGE_C;
+}triple_power;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -70,27 +75,29 @@ void Error_Handler(void);
 #define MAX_OUTPUT 100.f
 #define MIN_OUTPUT 0.0f
   /* ADC para*/
+#define VREF                  3.3f
+
 #define ADC_CHANNEL_NUM       16
-#define VREF                  15
 
-#define INPUT_CURRENT         1
+#define DC_INPUT_CURRENT         0//DCAC INPUT
 
-#define DC_OUT_VOLTAGE_1      2//DCAC OUTPUT
-#define DC_OUT_CURRENT_1      3
-#define DC_OUT_CURRENT_2      5
-#define DC_OUT_VOLTAGE_2      4
-#define DC_OUT_CURRENT_3      0
-#define DC_OUT_VOLTAGE_3      6
+#define DC_OUT_VOLTAGE_A      (15 - 1)//DCAC OUTPUT
+#define DC_OUT_CURRENT_A      (9 - 1)
+#define DC_OUT_CURRENT_B      (14 - 1)
+#define DC_OUT_VOLTAGE_B      (8 - 1)
+#define DC_OUT_CURRENT_C      4
+#define DC_OUT_VOLTAGE_C      6
 
-#define AC_IN_VOLTAGE_1       (8 - 1)//ACDC INPUT
-#define AC_IN_CURRENT_1       (9 - 1)
-#define AC_IN_VOLTAGE_2       (10 - 1)
-#define AC_IN_CURRENT_2       (11 - 1)
-#define AC_IN_VOLTAGE_3       (12 - 1)
-#define AC_IN_CURRENT_3       (13 - 1)
+#define AC_IN_VOLTAGE_A       (13 - 1)//ACDC INPUT
+#define AC_IN_CURRENT_A       (12 - 1)
+#define AC_IN_VOLTAGE_B       (11 - 1)
+#define AC_IN_CURRENT_B       (10 - 1)
+#define AC_IN_VOLTAGE_C       5
+#define AC_IN_CURRENT_C       3
 
-#define CURRENT_REF_CURRENT   (14 - 1)
-#define CURRENT_REF_VOLTAGE   (15 - 1)
+#define AC_OUT_VOLTAGE   1//DCAC OUTPUT
+#define AC_OUT_CURRENT   2
+
 
 
 /* USER CODE END Private defines */

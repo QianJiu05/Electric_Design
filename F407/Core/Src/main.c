@@ -57,16 +57,18 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 /* adc */
 static uint32_t adc_dma_buffer[ADC_CHANNEL_NUM];
-static uint32_t convert[ADC_CHANNEL_NUM - 1];
+triple_power DC_OUT, AC_IN;
+float dc_in_current,ac_out_volt,ac_out_current;
 
-struct node node[5];
+float spll_obj;
 
-PID_TypeDef pid_control[5] = {
-  {0.1,100,0,0,1,0},
-  {0.1,100,0,0,1,0},
-  {0.1,100,0,0,1,0},
-  {0.1,100,0,0,1,0},
-  {0.1,100,0,0,1,0},
+PID_TypeDef pid_control[PID_CONTROL_NUM] = {
+  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
 };
 
 SOGI_PLL_DATA_DEF spll_data;
@@ -83,6 +85,7 @@ static void MX_TIM8_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
+static void ADC_convert(void);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 
 /* USER CODE END PFP */
@@ -686,37 +689,47 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2) {
     /* ADC handle */
-
+    ADC_convert();
     /* SOGI-PLL */
-
+    //运行三相 SOGI-PLL
+    spll_sogi_func(&spll_data, AC_IN.VOLTAGE_A, AC_IN.VOLTAGE_B, AC_IN.VOLTAGE_C);
     /*
-    float va = InputSignal(0, 0);   // A 相
-    float vb = InputSignal(0, 1);   // B 相
-    float vc = InputSignal(0,2);   // C 相
-
-    // 2) 运行三相 SOGI-PLL
-    spll_sogi_func(&spll_data, va, vb, vc);
-    float v =spll_data.theta;
-
-    // 3) 输出结果
+    //输出结果
+    // float v =spll_data.theta;
     OutputSignal(0, 0) = spll_data.theta;          // 0 … 2π
     OutputSignal(0, 1) = spll_data.pll_freq_out;   // Hz
     OutputSignal(0, 2) = spll_data.u_q;            // PI 误差（调试用）
-
-    // park trans
-    park_transform(va, vb, vc, theta, &park_trans);
-
-
     */
-
-
-
+    // park trans
+    park_transform(AC_IN.VOLTAGE_A,AC_IN.VOLTAGE_B,AC_IN.VOLTAGE_C,spll_data.theta);
 
     /* set pwm */
+    PID_Calc()
+
 
     
   }
 
+}
+static void ADC_convert(void)
+{
+  //V = (ADC_Value / 4095.0) * V_ref
+  //内部参考电压没有计算
+  dc_in_current = ((float)adc_dma_buffer[DC_INPUT_CURRENT] / 4095.0f) * VREF;
+  ac_out_volt = ((float)adc_dma_buffer[AC_OUT_VOLTAGE] / 4095.0f) * VREF;
+  ac_out_current = ((float)adc_dma_buffer[AC_OUT_CURRENT] / 4095.0f) * VREF;
+  AC_IN.CURRENT_C = ((float)adc_dma_buffer[AC_IN_CURRENT_C] / 4095.0f) * VREF;
+  DC_OUT.CURRENT_C = ((float)adc_dma_buffer[DC_OUT_CURRENT_C] / 4095.0f) * VREF;
+  AC_IN.VOLTAGE_C = ((float)adc_dma_buffer[AC_IN_VOLTAGE_C] / 4095.0f) * VREF;
+  DC_OUT.VOLTAGE_C = ((float)adc_dma_buffer[DC_OUT_VOLTAGE_C] / 4095.0f) * VREF;
+  DC_OUT.VOLTAGE_B = ((float)adc_dma_buffer[DC_OUT_VOLTAGE_B] / 4095.0f) * VREF;
+  DC_OUT.CURRENT_A = ((float)adc_dma_buffer[DC_OUT_CURRENT_A] / 4095.0f) * VREF;
+  AC_IN.CURRENT_B = ((float)adc_dma_buffer[AC_IN_CURRENT_B] / 4095.0f) * VREF;
+  AC_IN.VOLTAGE_B = ((float)adc_dma_buffer[AC_IN_VOLTAGE_B] / 4095.0f) * VREF;
+  AC_IN.CURRENT_A = ((float)adc_dma_buffer[AC_IN_CURRENT_A]/ 4095.0f) * VREF;
+  AC_IN.VOLTAGE_A = ((float)adc_dma_buffer[AC_IN_VOLTAGE_A] / 4095.0f) * VREF;
+  DC_OUT.CURRENT_B = ((float)adc_dma_buffer[DC_OUT_CURRENT_B]/ 4095.0f) * VREF;
+  DC_OUT.VOLTAGE_A = ((float)adc_dma_buffer[DC_OUT_VOLTAGE_A]/ 4095.0f) * VREF;
 }
 /* USER CODE END 4 */
 
