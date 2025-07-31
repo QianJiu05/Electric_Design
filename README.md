@@ -1,14 +1,42 @@
-偶数电压 奇数电流
+
+
+## DCAC
+
+#### input
+
+currrent in0 （直流1.65v基准）
+
+#### output
+
+   volt   current 
+
+A 15    9
+
+B 14    8
+
+C 4    6
+
+## ACDC
+
+### AC
+
+   volt  current
+
+A 13    12
+
+B 11    10
+
+C 5    3
+
+### DC
+
+ volt 1
+
+current 2 (直流1.65v offset)
 
 
 
-输入直流:1
 
-DCAC的三相输出:2 3、4 5、6 0(原来的7，电压)
-
-ACDC的三相输入:8 9、10 11、12 13
-
-直流反馈:14 15
 
 
 

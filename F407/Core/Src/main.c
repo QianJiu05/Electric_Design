@@ -36,7 +36,6 @@
 /* USER CODE BEGIN PD */
 #define  float float32_t
 
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -697,11 +696,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     dq = park_transform(AC_IN.VOLTAGE_A,AC_IN.VOLTAGE_B,AC_IN.VOLTAGE_C,spll_data.theta);
 
     /* set pwm */
-
     PID_Calc(&pid_control[0],dc_in_current);//example
-
-
-    
   }
 
 }
