@@ -70,7 +70,7 @@ PID_TypeDef pid_control[5] = {
 };
 
 SOGI_PLL_DATA_DEF spll_data;
-PARK_TRANS park_trans;
+DQ_Components dq;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -686,8 +686,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2) {
     /* ADC handle */
-    
-    // HAL_UART_Transmit(&huart2,(uint8_t*)&adc_dma_buffer[VREF],sizeof(uint32_t),HAL_MAX_DELAY);
 
     /* SOGI-PLL */
 
@@ -698,6 +696,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
     // 2) 运行三相 SOGI-PLL
     spll_sogi_func(&spll_data, va, vb, vc);
+    float v =spll_data.theta;
 
     // 3) 输出结果
     OutputSignal(0, 0) = spll_data.theta;          // 0 … 2π

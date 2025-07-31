@@ -27,14 +27,8 @@ void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t t
     spll_obj->sogi_qu_coeff.A2 = SIGO_QU_A2;
 
     // Initialize PLL controller using ARM PID
-    float32_t pidKp = ssrf_kp;
-    float32_t pidKi = sser_ki;
-    float32_t pidKd = 0.0f;
-
-    // spll_obj->pid.Kp = pidKp;
-    // spll_obj->pid.Ki = pidKi;
-    // spll_obj->pid.Kd = pidKd;
-    // arm_pid_init_f32(&spll_obj->pid, 1);
+    float32_t spll_kp = ssrf_kp;
+    float32_t spll_ki = sser_ki;
 
     spll_obj->spp_freq_max_limt = ssrf_up_limt;
     spll_obj->spll_freq_min_limt = ssrf_low_limt;
@@ -43,12 +37,6 @@ void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t t
     spll_obj->sogi_alpha_coeff = spll_obj->sogi_u_coeff;   // 直接复制即可
     /* β 通道 */
     spll_obj->sogi_beta_coeff  = spll_obj->sogi_u_coeff;
-
-    // Initialize other variables
-    // spll_obj->theta = 0.0f;
-    // spll_obj->cos_theta = 1.0f;
-    // spll_obj->sin_theta = 0.0f;
-    // spll_obj->spll_integrator = 0.0f;
 }
 
 float32_t discrete_2order_tf(const float32_t input, DIS_2ORDER_TF_COEF_DEF *coeff, DIS_2ORDER_TF_DATA_DEF *data)
@@ -91,26 +79,28 @@ void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t va, float32_t vb, flo
     spll_obj->pll_freq_out = spll_obj->spll_diff * spll_obj->spll_kp + spll_obj->spll_integrator;
 
     /* 5. 角度更新 & 归一化 */
-    spll_obj->theta += spll_obj->pll_freq_out * value_2pi * spll_obj->delta_t;
+    spll_obj->theta -= spll_obj->pll_freq_out * value_2pi * spll_obj->delta_t;//+?-?
     // Normalize theta to [0, 2π]
     if (spll_obj->theta > value_2pi)    spll_obj->theta -= value_2pi;
     else if (spll_obj->theta < 0)   spll_obj->theta += value_2pi;
 
-    // // pi ctrol q to 0
-    // spll_obj->spll_diff = 0 - spll_obj->u_d;
-
-    // spll_obj->theta -= (spll_obj->pll_freq_out+0.5f) * value_2pi * spll_obj->delta_t;
-
     spll_obj->cos_theta = cos(spll_obj->theta);
     spll_obj->sin_theta = sin(spll_obj->theta);
-
 }
-/*
- * 原文件中与func关系协作完成 while1
- */
-
-void park_transform(float32_t xa, float32_t xb, float32_t xc, float theta, PARK_TRANS *res)
+DQ_Components park_transform(float32_t a, float32_t b, float32_t c, float theta)
 {
-    res->yd = (2.0/3.0)* (arm_cos_f32(theta)*xa + arm_cos_f32(theta - 2/3*M_PI)*xb + arm_cos_f32(theta + 2/3*M_PI)*xc);
-    res->yq = (2.0/3.0)* (-arm_sin_f32(theta)*xa - sin(theta-2/3*M_PI)*xb - sin(theta+2/3*M_PI)*xc);
+    // 预先计算120度和240度偏移角度
+    float sin_theta = arm_sin_f32(theta);
+    float cos_theta = arm_cos_f32(theta);
+
+    float32_t sqrt_3_over_2;
+    arm_sqrt_f32(3.0f,&sqrt_3_over_2);
+    sqrt_3_over_2 /= 2.0f;
+
+    DQ_Components dq;
+
+    dq.d=2.0f/3.0f*(a*cos_theta+b*(-0.5*cos_theta+sqrt_3_over_2*sin_theta)+c*(-0.5*cos_theta-sqrt_3_over_2*sin_theta));
+    dq.q = 2.0f/3.0f*(-a*sin_theta+b*(0.5*sin_theta+sqrt_3_over_2*cos_theta)+c*(0.5*sin_theta-sqrt_3_over_2*cos_theta));
+
+    return dq;
 }

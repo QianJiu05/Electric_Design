@@ -8,10 +8,14 @@
 #define FSW 20000.0f
 
 #define ssrf_ts             (1.0f/FSW)
-#define ssrf_kp             0.9f
-#define sser_ki             0.0001f
-#define ssrf_up_limt        63
-#define ssrf_low_limt       43
+// #define ssrf_kp             0.9f
+// #define sser_ki             0.0001f
+// #define ssrf_up_limt        63
+// #define ssrf_low_limt       43
+#define ssrf_kp             1.0f
+#define sser_ki             0.1f
+#define ssrf_up_limt        55
+#define ssrf_low_limt       45
 #define value_2pi           6.283185307f
 
 #define SIGO_U_GAIN  1
@@ -88,15 +92,15 @@ typedef struct SOGI_PLL_DATA_STRUCT_TAG
 //
 //  park struct
 //
-typedef struct park_trans {
-    float32_t yd;
-    float32_t yq;
-}PARK_TRANS;
+typedef struct {
+    double d;  // D轴分量（直轴）
+    double q;  // Q轴分量（交轴）
+} DQ_Components;
 
 void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t ts);
 void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t va, float32_t vb, float32_t vc);
 
-void park_transform(float32_t xa, float32_t xb, float32_t xc, float theta, PARK_TRANS *res);
+DQ_Components park_transform(float32_t xa, float32_t xb, float32_t xc, float theta);
 
 
 
