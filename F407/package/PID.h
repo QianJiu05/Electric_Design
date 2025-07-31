@@ -27,20 +27,20 @@ typedef struct {
     float Kd;
     float setpoint;
     float integral;
-    float last_error;
+    // float last_error;
 } PID_TypeDef;
 
-typedef struct {
-    PID_TypeDef voltage_pid;
-    PID_TypeDef current_pid;
-} DCDC_Channel;
-
-extern DCDC_Channel dcdc_ch1, dcdc_ch2;
+// typedef struct {
+//     PID_TypeDef voltage_pid;
+//     PID_TypeDef current_pid;
+// } DCDC_Channel;
+//
+// extern DCDC_Channel dcdc_ch1, dcdc_ch2;
 
 float PID_Calc(PID_TypeDef *pid, float feedback);
 void Set_PWM_Duty(TIM_HandleTypeDef htim,uint32_t channel, float duty);
 
-extern ControlMode g_mode;
-extern PID_TypeDef pid_V, pid_C;
+// extern ControlMode g_mode;
+// extern PID_TypeDef pid_V, pid_C;
 
 #endif //PID_H

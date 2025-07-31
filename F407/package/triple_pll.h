@@ -52,9 +52,7 @@ typedef struct DIS_2ORDER_TF_DATA_TAG {
 }DIS_2ORDER_TF_DATA_DEF;
 
 
-//
 // SOGI PLL date struct
-//
 typedef struct SOGI_PLL_DATA_STRUCT_TAG
 {
     float ac_u;
@@ -89,9 +87,7 @@ typedef struct SOGI_PLL_DATA_STRUCT_TAG
 
 }SOGI_PLL_DATA_DEF;
 
-//
 //  park struct
-//
 typedef struct {
     double d;  // D轴分量（直轴）
     double q;  // Q轴分量（交轴）
@@ -103,5 +99,4 @@ void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t va, float32_t vb, flo
 DQ_Components park_transform(float32_t xa, float32_t xb, float32_t xc, float theta);
 
 
-
-#endif //SINGLEPHASE_RECTIFIER_H
+#endif

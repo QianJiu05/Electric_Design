@@ -2,7 +2,8 @@
 #include "PID.h"
 
 
-float PID_Calc(PID_TypeDef *pid, float feedback) {
+float PID_Calc(PID_TypeDef *pid, float feedback)
+{
     float error = pid->setpoint - feedback;
     pid->integral += error;
     // pid->last_error = error;

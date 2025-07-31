@@ -57,18 +57,18 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 /* adc */
 static uint32_t adc_dma_buffer[ADC_CHANNEL_NUM];
-triple_power DC_OUT, AC_IN;
-float dc_in_current,ac_out_volt,ac_out_current;
+static triple_power DC_OUT, AC_IN;
+static float dc_in_current,ac_out_volt,ac_out_current;
 
 float spll_obj;
 
 PID_TypeDef pid_control[PID_CONTROL_NUM] = {
-  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f,0.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,0.0f,1.0f},
 };
 
 SOGI_PLL_DATA_DEF spll_data;
@@ -693,18 +693,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     /* SOGI-PLL */
     //运行三相 SOGI-PLL
     spll_sogi_func(&spll_data, AC_IN.VOLTAGE_A, AC_IN.VOLTAGE_B, AC_IN.VOLTAGE_C);
-    /*
-    //输出结果
-    // float v =spll_data.theta;
-    OutputSignal(0, 0) = spll_data.theta;          // 0 … 2π
-    OutputSignal(0, 1) = spll_data.pll_freq_out;   // Hz
-    OutputSignal(0, 2) = spll_data.u_q;            // PI 误差（调试用）
-    */
     // park trans
-    park_transform(AC_IN.VOLTAGE_A,AC_IN.VOLTAGE_B,AC_IN.VOLTAGE_C,spll_data.theta);
+    dq = park_transform(AC_IN.VOLTAGE_A,AC_IN.VOLTAGE_B,AC_IN.VOLTAGE_C,spll_data.theta);
 
     /* set pwm */
-    PID_Calc()
+
+    PID_Calc(&pid_control[0],dc_in_current);//example
 
 
     
