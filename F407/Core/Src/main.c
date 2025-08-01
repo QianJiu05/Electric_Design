@@ -30,7 +30,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define PART2 1
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -171,11 +171,11 @@ int main(void)
   // HAL_ADCEx_MultiModeStart_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
   HAL_ADC_Start_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
 
-  float test_arm = 10;
-  float test_math = 10;
-
-  arm_sqrt_f32(test_math, &test_arm);
-  test_math = sqrt(test_math);
+  // float test_arm = 10;
+  // float test_math = 10;
+  //
+  // arm_sqrt_f32(test_math, &test_arm);
+  // test_math = sqrt(test_math);
 
   /* USER CODE END 2 */
 
@@ -458,7 +458,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 5-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 1680-1;
+  htim1.Init.Period = 840-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -586,7 +586,7 @@ static void MX_TIM8_Init(void)
   htim8.Instance = TIM8;
   htim8.Init.Prescaler = 5-1;
   htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim8.Init.Period = 1680-1;
+  htim8.Init.Period = 840-1;
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim8.Init.RepetitionCounter = 0;
   htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -742,14 +742,28 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     system_step();//vco step & control step
 
     /* set pwm */
-    static float duty1,duty2,duty3;
-    duty1 = PID_Calc(&pid_control[0],sys_io.abc[0]);
-    duty2 = PID_Calc(&pid_control[1],sys_io.abc[1]);
-    duty3 = PID_Calc(&pid_control[2],sys_io.abc[2]);
+    // static float duty1,duty2,duty3;
 
-    Set_PWM_Duty(htim1,TIM_CHANNEL_1,duty1);
-    Set_PWM_Duty(htim1,TIM_CHANNEL_2,duty2);
-    Set_PWM_Duty(htim1,TIM_CHANNEL_3,duty3);
+    // Set_PWM_Duty(htim1,TIM_CHANNEL_1,sys_io.abc[0]);
+
+    Set_PWM_Duty(htim1,TIM_CHANNEL_1,50);
+    // Set_PWM_Duty(htim1,TIM_CHANNEL_2,sys_io.abc[1]);
+
+    Set_PWM_Duty(htim1,TIM_CHANNEL_2,100);
+    // Set_PWM_Duty(htim1,TIM_CHANNEL_3,sys_
+    // io.abc[2]);
+    Set_PWM_Duty(htim1,TIM_CHANNEL_3,100);
+
+  // if (PART2 == 1) {
+  //
+  //
+  //
+  //
+  //
+  //
+  //
+  //
+  // }
   }
 }
 

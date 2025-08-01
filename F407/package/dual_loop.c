@@ -55,12 +55,12 @@ float hypot_safe(float a, float b)
 
     if (a > b) {
         ratio = b / a;
-        arm_sqrt_f32(1.0f + ratio * ratio,&sqrt_a_or_b);
+        arm_sqrt_f32((1.0f + ratio * ratio),&sqrt_a_or_b);
         // return a * sqrtf(1.0f + ratio * ratio);
         return a * sqrt_a_or_b;
     } else {
         ratio = a / b;
-        arm_sqrt_f32(1.0f + ratio * ratio,&sqrt_a_or_b);
+        arm_sqrt_f32((1.0f + ratio * ratio),&sqrt_a_or_b);
         // return b * sqrtf(1.0f + ratio * ratio);
         return b * sqrt_a_or_b;
     }
@@ -101,9 +101,15 @@ void control_step(void)
     // sys_io.abc[1] = pi_output * sinf(sys_io.theta - TWO_PI_OVER_3)/30;
     sys_io.abc[1] = pi_output * arm_sin_f32(sys_io.theta - TWO_PI_OVER_3)/30.0f;
     // C相: M * sin(θ + 120°)
-    sys_io.abc[2] = pi_output * arm_sin_f32(sys_io.theta + TWO_PI_OVER_3)/30;
+    sys_io.abc[2] = pi_output * arm_sin_f32(sys_io.theta + TWO_PI_OVER_3)/30.0f;
+
+    //限制占空比
+
+
     // 5. 更新积分器状态: I[k+1] = I[k] + Ki * e * Ts
     sys_state.integrator += PI_GAIN_KI * error * TS_PLL;
+
+
 }
 
 /*----------------------------------------------------------
@@ -139,11 +145,6 @@ void system_step(void)
 //
 //     while (1) {
 //         // 生成模拟的三相电压输入 (仅用于演示)//A-B,B-C,C-A,转换为三相电压
-//
-//         float omega = 2 * PI * 50 * t;
-//         sys_io.vabc[0] = sinf(omega);
-//         sys_io.vabc[1] = sinf(omega - TWO_PI_OVER_3);
-//         sys_io.vabc[2] = sinf(omega + TWO_PI_OVER_3);
 //         t += TS_PLL;
 //
 //         // 执行系统主循环
