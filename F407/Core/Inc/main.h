@@ -76,17 +76,18 @@ void Error_Handler(void);
 #define MIN_OUTPUT 0.0f
   /* ADC para*/
 #define VREF                  3.3f
+#define adc_constant          2.85f
 
 #define ADC_CHANNEL_NUM       16
 
 #define DC_INPUT_CURRENT         0//DCAC INPUT
 
-#define DC_OUT_VOLTAGE_A      (15 - 1)//DCAC OUTPUT
-#define DC_OUT_CURRENT_A      (9 - 1)
-#define DC_OUT_CURRENT_B      (14 - 1)
-#define DC_OUT_VOLTAGE_B      (8 - 1)
-#define DC_OUT_CURRENT_C      4
-#define DC_OUT_VOLTAGE_C      6
+#define AC_OUT_VOLTAGE_A      (15 - 1)//DCAC OUTPUT :ACOUT
+#define AC_OUT_CURRENT_A      (9 - 1)
+#define AC_OUT_CURRENT_B      (14 - 1)
+#define AC_OUT_VOLTAGE_B      (8 - 1)
+#define AC_OUT_CURRENT_C      4
+#define AC_OUT_VOLTAGE_C      6
 
 #define AC_IN_VOLTAGE_A       (13 - 1)//ACDC INPUT
 #define AC_IN_CURRENT_A       (12 - 1)
@@ -95,8 +96,8 @@ void Error_Handler(void);
 #define AC_IN_VOLTAGE_C       5
 #define AC_IN_CURRENT_C       3
 
-#define AC_OUT_VOLTAGE   1//DCAC OUTPUT
-#define AC_OUT_CURRENT   2
+#define DC_OUT_VOLTAGE   1//DCAC OUTPUT
+#define DC_OUT_CURRENT   2
 
 
 
