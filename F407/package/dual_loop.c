@@ -6,7 +6,10 @@
 // #include "rtwtypes.h"
 // #include "VCO.h"
 // // #include "math.h"
-//
+// /* Block signals and states (default storage) for system '<Root>' */
+// typedef struct {
+//   real_T Integrator_DSTATE;            /* '<S38>/Integrator' */
+// } DW;
 // /* Block signals and states (default storage) */
 // DW rtDW;
 //

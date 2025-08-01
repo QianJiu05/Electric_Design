@@ -64,6 +64,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+void ADC_convert(void);
 
 /* USER CODE END EFP */
 
@@ -71,7 +72,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
   /* PID para*/
-#define AUTO_RELOAD_VALUE 1679
+#define AUTO_RELOAD_VALUE 839
 #define MAX_OUTPUT 100.f
 #define MIN_OUTPUT 0.0f
   /* ADC para*/
@@ -86,8 +87,8 @@ void Error_Handler(void);
 #define AC_OUT_CURRENT_A      (9 - 1)
 #define AC_OUT_VOLTAGE_B      (14 - 1)
 #define AC_OUT_CURRENT_B      (8 - 1)
-#define AC_OUT_CURRENT_C      6
 #define AC_OUT_VOLTAGE_C      4
+#define AC_OUT_CURRENT_C      6
 
 #define AC_IN_VOLTAGE_A       (13 - 1)//ACDC INPUT
 #define AC_IN_CURRENT_A       (12 - 1)
@@ -99,8 +100,15 @@ void Error_Handler(void);
 #define DC_OUT_VOLTAGE   1//ACDC OUTPUT
 #define DC_OUT_CURRENT   2
 
-
-
+  /* 常量定义 - 预计算提高效率 */
+#define SAMPLE_PERIOD  0.00005f      // 100μs 采样周期 (对应 10kHz 执行频率)
+#define TWO_PI         6.28318530718f  // 精确的 2π 值 (比原模型 6.28 更精确)
+#define PI             3.14159265359f  // π 值
+  /* 系统状态结构 */
+  typedef struct {
+    float phase;       // 累加相位 (弧度)
+    float freq_Hz;     // 当前频率 (Hz) 用于输出镜像
+  } VCO_State;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

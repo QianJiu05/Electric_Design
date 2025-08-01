@@ -1,6 +1,9 @@
 // #include "VCO.h"
 // #include "rtwtypes.h"
 //
+// typedef struct {
+//     real_T UnitDelay_DSTATE;             /* '<S1>/Unit Delay' */
+// } DW;
 // /* Block signals and states (default storage) */
 // DW rtDW;
 //

@@ -59,12 +59,14 @@ UART_HandleTypeDef huart2;
 /* adc */
 static uint32_t adc_dma_buffer[ADC_CHANNEL_NUM];
 static triple_power AC_OUT, AC_IN;
-static float dc_in_current,dc_out_volt,dc_out_current;
+static float dc_in_current,dc_out_volt,dc_out_current,vrefint;
 
 float spll_obj;
 
 static char send[100];
-
+static uint8_t cnt = 0;
+static uint32_t temp[ADC_CHANNEL_NUM];
+static uint32_t real[ADC_CHANNEL_NUM];
 
 PID_TypeDef pid_control[PID_CONTROL_NUM] = {
   {0.1f,100.0f,0.0f,1.0f},
@@ -77,6 +79,17 @@ PID_TypeDef pid_control[PID_CONTROL_NUM] = {
 
 SOGI_PLL_DATA_DEF spll_data;
 DQ_Components dq;
+
+/* 外部接口 */
+float rtU_freq_Hz=50;     // 输入: 频率 (Hz)
+float rtY_theta;       // 输出: 相位 (rad)
+float rtY_freq_Hz;     // 输出: 频率 (Hz) - 镜像输入频率
+
+
+static uint32_t res0;
+static uint32_t res1;
+VCO_State vco_state;   // 全局状态实例
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -89,14 +102,51 @@ static void MX_TIM8_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-static void ADC_convert(void);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+void DMA2_Stream0_Callback(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void vco_init(void) {
+  vco_state.phase = 0.0f;     // 初始相位归零
+  vco_state.freq_Hz = 50.0f;   // 初始频率归零
+}
 
+/*----------------------------------------------------------
+ * 函数: vco_step
+ * 功能: 执行单步VCO计算 (输入为频率Hz)
+ * 说明:
+ *   1. 保存输入频率用于输出镜像
+ *   2. 计算相位增量: Δphase = 2π * f * Δt
+ *   3. 更新相位累加器
+ *   4. 自动相位回绕 (±2π范围)
+ *---------------------------------------------------------*/
+void vco_step(void) {
+  // 1. 保存当前输入频率 (用于输出镜像)
+  vco_state.freq_Hz = rtU_freq_Hz;
+
+  // 2. 计算相位增量: 2π * f * Δt
+  float phase_increment = TWO_PI * rtU_freq_Hz * SAMPLE_PERIOD;
+
+  // 3. 更新相位累加器
+  vco_state.phase += phase_increment;
+
+  // 4. 相位自动回绕处理 [0, 2π) 范围
+  // 高效处理正相位溢出
+  if (vco_state.phase >= TWO_PI) {
+    vco_state.phase -= TWO_PI;
+  }
+  // 高效处理负相位溢出
+  else if (vco_state.phase < 0.0f) {
+    vco_state.phase += TWO_PI;
+  }
+
+  // 5. 设置输出
+  rtY_theta = vco_state.phase;    // 当前相位 (弧度)
+  rtY_freq_Hz = vco_state.freq_Hz; // 镜像输出当前频率
+}
 /* USER CODE END 0 */
 
 /**
@@ -155,8 +205,9 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
 
   /*启动ADC DMA*/
-  HAL_ADC_Start_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
-
+  // HAL_ADC_Start(&hadc2);
+  // HAL_ADCEx_MultiModeStart_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
+HAL_ADC_Start_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
 
   // sogi_pll_init(&spll_data,50*value_2pi,ssrf_ts);
 
@@ -166,6 +217,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    // ADC_convert();
+
 
 //DC_OUT
 
@@ -256,7 +309,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 15;
+  hadc1.Init.NbrOfConversion = 16;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -395,6 +448,15 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_15;
   sConfig.Rank = 15;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_VREFINT;
+  sConfig.Rank = 16;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -672,6 +734,7 @@ static void MX_DMA_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
 
   /* USER CODE END MX_GPIO_Init_1 */
@@ -684,6 +747,12 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
+  /*Configure GPIO pins : PC2 PC3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
@@ -693,47 +762,66 @@ static void MX_GPIO_Init(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2) {
-    /* ADC handle */
-    ADC_convert();
-
     // /* set pwm */
-    // PID_Calc(&pid_control[0],dc_in_current);//example
-
     Set_PWM_Duty(htim1,TIM_CHANNEL_1,0);
     Set_PWM_Duty(htim1,TIM_CHANNEL_2,0);
     Set_PWM_Duty(htim1,TIM_CHANNEL_3,0);
+    vco_step();
   }
-
 }
 // static void ADC_convert(void)
-static inline void ADC_convert(void)
+void ADC_convert(void)
 {
+  cnt++;
+  for (int i = 0; i < ADC_CHANNEL_NUM; i++) {
+    temp[i] += adc_dma_buffer[i];
+  }
+  if (cnt == 4) {
+    for (int i = 0; i < ADC_CHANNEL_NUM; i++) {
+      real[i] = temp[i]/4;
+      temp[i] = 0;
+    }
+    cnt = 0;
+  }
+  dc_in_current = ((float)real[DC_INPUT_CURRENT] / 4095.0f) * VREF;
+  dc_out_volt = ((float)real[DC_OUT_VOLTAGE] / 4095.0f)* VREF * 60 / adc_constant;
+  dc_out_current = ((float)real[DC_OUT_CURRENT] / 4095.0f) * VREF;
+  AC_IN.CURRENT_C = ((float)real[AC_IN_CURRENT_C] / 4095.0f) * VREF;
+  AC_OUT.CURRENT_C = ((float)real[AC_OUT_CURRENT_C] - 2047.5f )/ 4095.0f *8.25f ;
+  AC_IN.VOLTAGE_C = ((float)real[AC_IN_VOLTAGE_C] / 4095.0f) * VREF * 60 / adc_constant;
+  AC_OUT.VOLTAGE_C = ((float)real[AC_OUT_VOLTAGE_C] / 4095.0f) * VREF * 60 / adc_constant + 0.505805181f;//+ 0.505805181f;//1.504  - 0.998194819
+  AC_OUT.VOLTAGE_B = ((float)real[AC_OUT_VOLTAGE_B] / 4095.0f) * VREF * 60 / adc_constant - 0.147614626f;//1.514 -1.661614626
+  AC_OUT.CURRENT_A = ((float)real[AC_OUT_CURRENT_A] - 2047.5f )/ 4095.0f * 8.25f ;
+  AC_IN.CURRENT_B = ((float)real[AC_IN_CURRENT_B] / 4095.0f) * VREF;
+  AC_IN.VOLTAGE_B = ((float)real[AC_IN_VOLTAGE_B] / 4095.0f) * VREF * 60 / adc_constant;
+  AC_IN.CURRENT_A = ((float)real[AC_IN_CURRENT_A]/ 4095.0f) * VREF;
+  AC_IN.VOLTAGE_A = ((float)real[AC_IN_VOLTAGE_A] / 4095.0f) * VREF * 60 / adc_constant;
+  AC_OUT.CURRENT_B = ((float)real[AC_OUT_CURRENT_B] - 2047.5f )/ 4095.0f *8.25f ;
+  AC_OUT.VOLTAGE_A = ((float)real[AC_OUT_VOLTAGE_A]/ 4095.0f) * VREF * 60 / adc_constant + 0.09432894;//1.508- 1.431367106
+
+  uint16_t vrefint_cal = *VREFINT_CAL_ADDR; // 读取校准值
+  vrefint = vrefint_cal  * VREF /  real[15];
+
   //V = (ADC_Value / 4095.0) * V_ref
   //adc电压满量程是69.473V
   //电压换算：/4096*60*（3.3/2.85）
   //电流半量程是0A，满量程是8.25A，空量程是-8.25A
   //内部参考电压没有计算
-
-  dc_in_current = ((float)adc_dma_buffer[DC_INPUT_CURRENT] / 4095.0f) * VREF;
-  dc_out_volt = ((float)adc_dma_buffer[DC_OUT_VOLTAGE] / 4095.0f)* VREF * 60 / adc_constant;
-  dc_out_current = ((float)adc_dma_buffer[DC_OUT_CURRENT] / 4095.0f) * VREF;
-  AC_IN.CURRENT_C = ((float)adc_dma_buffer[AC_IN_CURRENT_C] / 4095.0f) * VREF;
-  AC_OUT.CURRENT_C = ((float)adc_dma_buffer[AC_OUT_CURRENT_C] - 2047.5f )/ 4095.0f *8.25f ;
-  AC_IN.VOLTAGE_C = ((float)adc_dma_buffer[AC_IN_VOLTAGE_C] / 4095.0f) * VREF * 60 / adc_constant;
-  AC_OUT.VOLTAGE_C = ((float)adc_dma_buffer[AC_OUT_VOLTAGE_C] / 4095.0f) * VREF * 60 / adc_constant;
-  AC_OUT.VOLTAGE_B = ((float)adc_dma_buffer[AC_OUT_VOLTAGE_B] / 4095.0f) * VREF * 60 / adc_constant;
-  AC_OUT.CURRENT_A = ((float)adc_dma_buffer[AC_OUT_CURRENT_A] - 2047.5f )/ 4095.0f * 8.25f ;
-  AC_IN.CURRENT_B = ((float)adc_dma_buffer[AC_IN_CURRENT_B] / 4095.0f) * VREF;
-  AC_IN.VOLTAGE_B = ((float)adc_dma_buffer[AC_IN_VOLTAGE_B] / 4095.0f) * VREF * 60 / adc_constant;
-  AC_IN.CURRENT_A = ((float)adc_dma_buffer[AC_IN_CURRENT_A]/ 4095.0f) * VREF;
-  AC_IN.VOLTAGE_A = ((float)adc_dma_buffer[AC_IN_VOLTAGE_A] / 4095.0f) * VREF * 60 / adc_constant;
-  AC_OUT.CURRENT_B = ((float)adc_dma_buffer[AC_OUT_CURRENT_B]/ - 2047.5f )/ 4095.0f *8.25f ;
-  AC_OUT.VOLTAGE_A = ((float)adc_dma_buffer[AC_OUT_VOLTAGE_A]/ 4095.0f) * VREF * 60 / adc_constant;
-
+  
   // sprintf(send,"adc1 = %d, adc2 = %d, adc3 = %d, adc4 = %d, adc5 = %d, adc6 = %d\n"
   // ,AC_OUT.CURRENT_A,AC_OUT.CURRENT_B,AC_OUT.CURRENT_C,AC_OUT.VOLTAGE_A,AC_OUT.VOLTAGE_B,AC_OUT.VOLTAGE_C);
   // HAL_UART_Transmit(&huart2,(uint8_t *)&send,strlen(send),HAL_MAX_DELAY);
 }
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
+{
+
+  uint32_t temp0,temp1;
+  temp0 = (adc_dma_buffer[AC_OUT_VOLTAGE_C] & 0xFFFF0000) >> 16;     // 高16位数据，这是ADC2的转换数据
+  temp1 = (adc_dma_buffer[AC_OUT_VOLTAGE_C] & 0xFFFF);               // 低16位数据，这是ADC1的转换数据
+  res0 =(float)temp0 / 4096 * 3.3f;
+  res1 =temp1;
+}
+
 /* USER CODE END 4 */
 
 /**

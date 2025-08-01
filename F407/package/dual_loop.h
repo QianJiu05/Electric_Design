@@ -40,10 +40,7 @@
 // /* Forward declaration for rtModel */
 // typedef struct tag_RTM RT_MODEL;
 //
-// /* Block signals and states (default storage) for system '<Root>' */
-// typedef struct {
-//   real_T Integrator_DSTATE;            /* '<S38>/Integrator' */
-// } DW;
+//
 //
 // /* External inputs (root inport signals with default storage) */
 // typedef struct {
@@ -63,7 +60,7 @@
 // };
 //
 // /* Block signals and states (default storage) */
-// extern DW rtDW;
+// // extern DW rtDW;
 //
 // /* External inputs (root inport signals with default storage) */
 // extern ExtU rtU;
