@@ -1,7 +1,3 @@
-//
-// Created by 32114 on 25-7-27.
-//
-
 #ifndef TRIPLE_PLL_H
 #define TRIPLE_PLL_H
 
@@ -92,11 +88,16 @@ typedef struct {
     double d;  // D轴分量（直轴）
     double q;  // Q轴分量（交轴）
 } DQ_Components;
-
+typedef struct {
+    float32_t a;
+    float32_t b;
+    float32_t c;
+} REVER_Components;
 void sogi_pll_init(SOGI_PLL_DATA_DEF *spll_obj, float32_t grid_freq, float32_t ts);
 void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t va, float32_t vb, float32_t vc);
 
 DQ_Components park_transform(float32_t xa, float32_t xb, float32_t xc, float theta);
+REVER_Components inverse_park_transform(float32_t d, float32_t q, float theta);
 
 
 #endif

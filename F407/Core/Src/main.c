@@ -62,12 +62,12 @@ static float dc_in_current,ac_out_volt,ac_out_current;
 float spll_obj;
 
 PID_TypeDef pid_control[PID_CONTROL_NUM] = {
-  {0.1f,100.0f,0.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,1.0f},
+  {0.1f,100.0f,0.0f,1.0f},
 };
 
 SOGI_PLL_DATA_DEF spll_data;
@@ -700,7 +700,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   }
 
 }
-static void ADC_convert(void)
+// static void ADC_convert(void)
+static inline void ADC_convert(void)
 {
   //V = (ADC_Value / 4095.0) * V_ref
   //内部参考电压没有计算

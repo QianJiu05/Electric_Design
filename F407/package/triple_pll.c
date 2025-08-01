@@ -71,7 +71,7 @@ void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t va, float32_t vb, flo
     spll_obj->u_q = -u_alpha * spll_obj->sin_theta
                    + u_beta  * spll_obj->cos_theta;
 
-    // /* 4. 以下 PLL 部分完全不用改 */
+    // /* 4. PLL  */
     spll_obj->spll_diff = 0.0f - spll_obj->u_q;   // 让 u_q → 0
 
     spll_obj->spll_integrator += spll_obj->spll_diff * spll_obj->spll_ki;
@@ -84,8 +84,8 @@ void spll_sogi_func(SOGI_PLL_DATA_DEF *spll_obj, float32_t va, float32_t vb, flo
     if (spll_obj->theta > value_2pi)    spll_obj->theta -= value_2pi;
     else if (spll_obj->theta < 0)   spll_obj->theta += value_2pi;
 
-    spll_obj->cos_theta = cos(spll_obj->theta);
-    spll_obj->sin_theta = sin(spll_obj->theta);
+    spll_obj->cos_theta = arm_cos_f32(spll_obj->theta);
+    spll_obj->sin_theta = arm_sin_f32(spll_obj->theta);
 }
 DQ_Components park_transform(float32_t a, float32_t b, float32_t c, float theta)
 {
@@ -103,4 +103,23 @@ DQ_Components park_transform(float32_t a, float32_t b, float32_t c, float theta)
     dq.q = 2.0f/3.0f*(-a*sin_theta+b*(0.5*sin_theta+sqrt_3_over_2*cos_theta)+c*(0.5*sin_theta-sqrt_3_over_2*cos_theta));
 
     return dq;
+}
+
+REVER_Components inverse_park_transform(float32_t d, float32_t q, float theta)
+{
+    // 预先计算120度和240度偏移角度
+    float sin_theta = arm_sin_f32(theta);
+    float cos_theta = arm_cos_f32(theta);
+
+    float32_t sqrt_3_over_2;
+    arm_sqrt_f32(3.0f, &sqrt_3_over_2);
+    sqrt_3_over_2 /= 2.0f;
+
+    REVER_Components rvt;
+
+    rvt.a = d * cos_theta - q * sin_theta;
+    rvt.b = d * (-0.5 * cos_theta + sqrt_3_over_2 * sin_theta) + q * (-0.5 * sin_theta - sqrt_3_over_2 * cos_theta);
+    rvt.c = d * (-0.5 * cos_theta - sqrt_3_over_2 * sin_theta) + q * (-0.5 * sin_theta + sqrt_3_over_2 * cos_theta);
+
+    return rvt;
 }
