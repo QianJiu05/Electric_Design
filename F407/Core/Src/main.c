@@ -24,9 +24,8 @@
 #include <stdio.h>
 
 #include "stm32f4xx_hal_adc.h"
-#include "arm_math.h"
+#include "dual_loop.h"
 #include "PID.h"
-#include "triple_pll.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,7 +35,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define  float float32_t
 
 /* USER CODE END PD */
 
@@ -56,38 +54,33 @@ TIM_HandleTypeDef htim8;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-/* adc */
+      /* adc */
 static uint32_t adc_dma_buffer[ADC_CHANNEL_NUM];
-static triple_power AC_OUT, AC_IN;
+triple_power AC_OUT, AC_IN;
 static float dc_in_current,dc_out_volt,dc_out_current,vrefint;
 
-float spll_obj;
-
-static char send[100];
+// static char send[100];
 static uint8_t cnt = 0;
 static uint32_t temp[ADC_CHANNEL_NUM];
 static uint32_t real[ADC_CHANNEL_NUM];
 
+      /* pid */
 PID_TypeDef pid_control[PID_CONTROL_NUM] = {
-  {0.1f,100.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,1.0f},
-  {0.1f,100.0f,0.0f,1.0f},
+  {0.1f,10.0f,0.0f,1.0f},//AC_OUT A
+  {0.1f,10.0f,0.0f,1.0f},//AC_OUT B
+  {0.1f,10.0f,0.0f,1.0f},//AC_OUT C
+  {0.1f,10.0f,0.0f,1.0f},
+  {0.1f,10.0f,0.0f,1.0f},
+  {0.1f,10.0f,0.0f,1.0f},
 };
 
-SOGI_PLL_DATA_DEF spll_data;
-DQ_Components dq;
-
-/* 外部接口 */
-float rtU_freq_Hz=50;     // 输入: 频率 (Hz)
+      /* dual loop */
+float rtU_freq_Hz = 50.0f;     // 输入: 频率 (Hz),要能步进
 float rtY_theta;       // 输出: 相位 (rad)
 float rtY_freq_Hz;     // 输出: 频率 (Hz) - 镜像输入频率
 
-
-static uint32_t res0;
-static uint32_t res1;
+System_State sys_state;     // 系统状态
+System_IO sys_io;           // 系统输入输出
 VCO_State vco_state;   // 全局状态实例
 
 /* USER CODE END PV */
@@ -104,49 +97,15 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void DMA2_Stream0_Callback(void);
+// void dual_loop_func(void);
+void vco_init(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void vco_init(void) {
-  vco_state.phase = 0.0f;     // 初始相位归零
-  vco_state.freq_Hz = 50.0f;   // 初始频率归零
-}
 
-/*----------------------------------------------------------
- * 函数: vco_step
- * 功能: 执行单步VCO计算 (输入为频率Hz)
- * 说明:
- *   1. 保存输入频率用于输出镜像
- *   2. 计算相位增量: Δphase = 2π * f * Δt
- *   3. 更新相位累加器
- *   4. 自动相位回绕 (±2π范围)
- *---------------------------------------------------------*/
-void vco_step(void) {
-  // 1. 保存当前输入频率 (用于输出镜像)
-  vco_state.freq_Hz = rtU_freq_Hz;
 
-  // 2. 计算相位增量: 2π * f * Δt
-  float phase_increment = TWO_PI * rtU_freq_Hz * SAMPLE_PERIOD;
-
-  // 3. 更新相位累加器
-  vco_state.phase += phase_increment;
-
-  // 4. 相位自动回绕处理 [0, 2π) 范围
-  // 高效处理正相位溢出
-  if (vco_state.phase >= TWO_PI) {
-    vco_state.phase -= TWO_PI;
-  }
-  // 高效处理负相位溢出
-  else if (vco_state.phase < 0.0f) {
-    vco_state.phase += TWO_PI;
-  }
-
-  // 5. 设置输出
-  rtY_theta = vco_state.phase;    // 当前相位 (弧度)
-  rtY_freq_Hz = vco_state.freq_Hz; // 镜像输出当前频率
-}
 /* USER CODE END 0 */
 
 /**
@@ -186,6 +145,9 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  vco_init();
+  system_init();
+
   /*启动PWM输出*/
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1); // TIM1 CH1N互补
@@ -207,9 +169,13 @@ int main(void)
   /*启动ADC DMA*/
   // HAL_ADC_Start(&hadc2);
   // HAL_ADCEx_MultiModeStart_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
-HAL_ADC_Start_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
+  HAL_ADC_Start_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
 
-  // sogi_pll_init(&spll_data,50*value_2pi,ssrf_ts);
+  float test_arm = 10;
+  float test_math = 10;
+
+  arm_sqrt_f32(test_math, &test_arm);
+  test_math = sqrt(test_math);
 
   /* USER CODE END 2 */
 
@@ -217,6 +183,8 @@ HAL_ADC_Start_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+
     // ADC_convert();
 
 
@@ -762,14 +730,29 @@ static void MX_GPIO_Init(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2) {
-    // /* set pwm */
-    Set_PWM_Duty(htim1,TIM_CHANNEL_1,0);
-    Set_PWM_Duty(htim1,TIM_CHANNEL_2,0);
-    Set_PWM_Duty(htim1,TIM_CHANNEL_3,0);
-    vco_step();
+
+    /* adc measure */
+    ADC_convert();
+    sys_io.vabc[0] = AC_OUT.VOLTAGE_A - AC_OUT.VOLTAGE_B;
+    sys_io.vabc[1] = AC_OUT.VOLTAGE_B - AC_OUT.VOLTAGE_C;
+    sys_io.vabc[2] = AC_OUT.VOLTAGE_C - AC_OUT.VOLTAGE_A;
+
+    /* func */
+    //         t += TS_PLL;?????
+    system_step();//vco step & control step
+
+    /* set pwm */
+    static float duty1,duty2,duty3;
+    duty1 = PID_Calc(&pid_control[0],sys_io.abc[0]);
+    duty2 = PID_Calc(&pid_control[1],sys_io.abc[1]);
+    duty3 = PID_Calc(&pid_control[2],sys_io.abc[2]);
+
+    Set_PWM_Duty(htim1,TIM_CHANNEL_1,duty1);
+    Set_PWM_Duty(htim1,TIM_CHANNEL_2,duty2);
+    Set_PWM_Duty(htim1,TIM_CHANNEL_3,duty3);
   }
 }
-// static void ADC_convert(void)
+
 void ADC_convert(void)
 {
   cnt++;
@@ -807,21 +790,44 @@ void ADC_convert(void)
   //电压换算：/4096*60*（3.3/2.85）
   //电流半量程是0A，满量程是8.25A，空量程是-8.25A
   //内部参考电压没有计算
-  
-  // sprintf(send,"adc1 = %d, adc2 = %d, adc3 = %d, adc4 = %d, adc5 = %d, adc6 = %d\n"
-  // ,AC_OUT.CURRENT_A,AC_OUT.CURRENT_B,AC_OUT.CURRENT_C,AC_OUT.VOLTAGE_A,AC_OUT.VOLTAGE_B,AC_OUT.VOLTAGE_C);
-  // HAL_UART_Transmit(&huart2,(uint8_t *)&send,strlen(send),HAL_MAX_DELAY);
 }
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
+
+void vco_init(void)
 {
-
-  uint32_t temp0,temp1;
-  temp0 = (adc_dma_buffer[AC_OUT_VOLTAGE_C] & 0xFFFF0000) >> 16;     // 高16位数据，这是ADC2的转换数据
-  temp1 = (adc_dma_buffer[AC_OUT_VOLTAGE_C] & 0xFFFF);               // 低16位数据，这是ADC1的转换数据
-  res0 =(float)temp0 / 4096 * 3.3f;
-  res1 =temp1;
+  vco_state.phase = 0.0f;     // 初始相位归零
+  vco_state.freq_Hz = 50.0f;   // 初始频率归零
 }
 
+/*----------------------------------------------------------
+ * 函数: vco_step
+ * 功能: 执行单步VCO计算 (输入为频率Hz)
+ * 说明:
+ *   1. 保存输入频率用于输出镜像
+ *   2. 计算相位增量: Δphase = 2π * f * Δt
+ *   3. 更新相位累加器
+ *   4. 自动相位回绕 (±2π范围)
+ *---------------------------------------------------------*/
+void vco_step(void)
+{
+  // 1. 保存当前输入频率 (用于输出镜像)
+  vco_state.freq_Hz = rtU_freq_Hz;
+  // 2. 计算相位增量: 2π * f * Δt
+  float phase_increment = TWO_PI * rtU_freq_Hz * SAMPLE_PERIOD;
+  // 3. 更新相位累加器
+  vco_state.phase += phase_increment;
+  // 4. 相位自动回绕处理 [0, 2π) 范围
+  // 高效处理正相位溢出
+  if (vco_state.phase >= TWO_PI) {
+    vco_state.phase -= TWO_PI;
+  }
+  // 高效处理负相位溢出
+  else if (vco_state.phase < 0.0f) {
+    vco_state.phase += TWO_PI;
+  }
+  // 5. 设置输出
+  rtY_theta = vco_state.phase;    // 当前相位 (弧度)
+  rtY_freq_Hz = vco_state.freq_Hz; // 镜像输出当前频率
+}
 /* USER CODE END 4 */
 
 /**

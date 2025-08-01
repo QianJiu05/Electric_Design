@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "arm_math.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -65,12 +65,14 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 void ADC_convert(void);
-
+void vco_step(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 
 /* USER CODE BEGIN Private defines */
+#define  float float32_t
+
   /* PID para*/
 #define AUTO_RELOAD_VALUE 839
 #define MAX_OUTPUT 100.f
@@ -103,7 +105,7 @@ void ADC_convert(void);
   /* 常量定义 - 预计算提高效率 */
 #define SAMPLE_PERIOD  0.00005f      // 100μs 采样周期 (对应 10kHz 执行频率)
 #define TWO_PI         6.28318530718f  // 精确的 2π 值 (比原模型 6.28 更精确)
-#define PI             3.14159265359f  // π 值
+// #define PI             3.14159265359f  // π 值
   /* 系统状态结构 */
   typedef struct {
     float phase;       // 累加相位 (弧度)

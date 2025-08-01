@@ -25,11 +25,11 @@ typedef struct {
     float Kp;
     float Ki;
     // float Kd;
-    float setpoint;
+    float feedback;
     float integral;
 } PID_TypeDef;
 
-float PID_Calc(PID_TypeDef *pid, float feedback);
+float PID_Calc(PID_TypeDef *pid, float setpoint);
 void Set_PWM_Duty(TIM_HandleTypeDef htim,uint32_t channel, float duty);
 
 // extern ControlMode g_mode;

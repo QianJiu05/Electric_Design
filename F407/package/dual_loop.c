@@ -1,213 +1,159 @@
-// #include "dual_loop.h"
+#include <stdio.h>
+#include <math.h>
+
+#include "dual_loop.h"
+
+#include "arm_math.h"
+#include "main.h"
+
+/* 全局系统实例 */
+extern System_State sys_state;     // 系统状态
+extern System_IO sys_io;           // 系统输入输出
+extern triple_power AC_OUT, AC_IN;
+/*----------------------------------------------------------
+ * 函数: system_init
+ * 功能: 初始化整个系统状态
+ *---------------------------------------------------------*/
+void system_init(void)
+{
+    /* VCO 初始化 */
+    // sys_state.vco_phase = 0.0f;
+    sys_state.vco_phase = 0.0f;
+    sys_state.vco_freq = 50.0f;
+
+    /* PI 控制器初始化 */
+    sys_state.integrator = 0.0f;
+
+    /* IO 初始化 */
+    for (int i = 0; i < 3; i++) {
+        sys_io.vabc[i] = 0.0f;
+        sys_io.abc[i] = 0.0f;
+        sys_state.vabc[i] = 0.0f;
+    }
+
+    sys_io.freq_sp = 0.0f;
+    sys_io.volt_ref = 0.0f;
+    sys_io.theta = 0.0f;
+    sys_io.freq_actual = 0.0f;
+}
+
+/*----------------------------------------------------------
+ * 函数: hypot_safe
+ * 功能: 安全欧几里得范数计算 (防止数值溢出)
+ * 说明: 比 sqrt(a² + b²) 更安全
+ *---------------------------------------------------------*/
+float hypot_safe(float a, float b)
+{
+    a = fabsf(a);
+    b = fabsf(b);
+
+    if (a == 0 && b == 0) return 0.0f;
+
+    float sqrt_a_or_b;
+    float ratio;
+
+
+    if (a > b) {
+        ratio = b / a;
+        arm_sqrt_f32(1.0f + ratio * ratio,&sqrt_a_or_b);
+        // return a * sqrtf(1.0f + ratio * ratio);
+        return a * sqrt_a_or_b;
+    } else {
+        ratio = a / b;
+        arm_sqrt_f32(1.0f + ratio * ratio,&sqrt_a_or_b);
+        // return b * sqrtf(1.0f + ratio * ratio);
+        return b * sqrt_a_or_b;
+    }
+}
+
+/*----------------------------------------------------------
+ * 函数: control_step
+ * 功能: 闭环控制单步计算 (20kHz)
+ * 说明:
+ *   1. 执行 Clark 变换 (abc → αβ)
+ *   2. 计算电压幅值 (|Vαβ|)
+ *   3. PI 控制器计算 (幅值误差)
+ *   4. 逆 Park 变换 (生成三相调制波)
+ *   5. 更新积分器状态
+ *---------------------------------------------------------*/
+void control_step(void)
+{
+    // 1. Clark 变换: 三相→两相静止坐标系 (αβ)
+    // α = 2/3 * [Va - 0.5*(Vb + Vc)]
+    float alpha = CLARK_GAIN * (sys_io.vabc[0] - 0.5f*(sys_io.vabc[1] + sys_io.vabc[2]));
+    // β = (√3/3) * (Vb - Vc) = (1/√3)*(Vb - Vc)
+    // 等效公式: β = (2/3) * (√3/2 * (Vb - Vc)) = (1/√3) * (Vb - Vc)
+    float beta = SQRT_3_OVER_2 * CLARK_GAIN * (sys_io.vabc[1] - sys_io.vabc[2]);
+    // 2. 计算电压矢量幅值 (|Vαβ| = √(α² + β²))
+    float volt_meas = hypot_safe(alpha, beta);
+    // 3. PI 控制器计算
+    float error = sys_io.volt_ref - volt_meas;
+    float p_term = PI_GAIN_KP * error;
+    float i_term = sys_state.integrator;  // 积分项使用预存值
+    // PI 输出 = Kp*e + ∫Ki*e dt
+    float pi_output = p_term + i_term;
+    // 4. 逆 Park 变换: 生成三相调制波 (使用VCO产生的相位)
+    // A相: M * sin(θ)
+    // sys_io.abc[0] = pi_output * sinf(sys_io.theta)/30; // 乘以30是为了放大到PWM范围
+    sys_io.abc[0] = pi_output * arm_sin_f32(sys_io.theta)/30.0f; // 乘以30是为了放大到PWM范围
+
+    // B相: M * sin(θ - 120°)
+    // sys_io.abc[1] = pi_output * sinf(sys_io.theta - TWO_PI_OVER_3)/30;
+    sys_io.abc[1] = pi_output * arm_sin_f32(sys_io.theta - TWO_PI_OVER_3)/30.0f;
+    // C相: M * sin(θ + 120°)
+    sys_io.abc[2] = pi_output * arm_sin_f32(sys_io.theta + TWO_PI_OVER_3)/30;
+    // 5. 更新积分器状态: I[k+1] = I[k] + Ki * e * Ts
+    sys_state.integrator += PI_GAIN_KI * error * TS_PLL;
+}
+
+/*----------------------------------------------------------
+ * 函数: system_step
+ * 功能: 系统主循环单步计算 (20kHz)
+ * 说明: 顺序执行 VCO 和闭环控制
+ *---------------------------------------------------------*/
+void system_step(void)
+{
+    // 刷新输入缓冲
+    for (int i = 0; i < 3; i++) {
+        sys_state.vabc[i] = sys_io.vabc[i];
+    }
+    // 执行 VCO 计算 (生成相位)
+    vco_step();
+    // 执行闭环控制计算
+    control_step();
+}
+
+/*************************** 示例代码 ***************************/
+//示例代码
+// // int main(void) {
+//     // 系统初始化
+//     system_init();
 //
-// #include <math.h>
+//     // 设置目标频率 (50Hz) 和参考电压 (1.0)
+//     sys_io.freq_sp = 50.0f;
+//     sys_io.volt_ref = 1.0f;
 //
-// #include "arm_math.h"
-// #include "rtwtypes.h"
-// #include "VCO.h"
-// // #include "math.h"
-// /* Block signals and states (default storage) for system '<Root>' */
-// typedef struct {
-//   real_T Integrator_DSTATE;            /* '<S38>/Integrator' */
-// } DW;
-// /* Block signals and states (default storage) */
-// DW rtDW;
+//     // 假设的三相电压测量值 (动态变化)
+//     // 实际应用中应来自ADC采样
+//     float t = 0.0f;
 //
-// /* External inputs (root inport signals with default storage) */
-// ExtU rtU;
+//     while (1) {
+//         // 生成模拟的三相电压输入 (仅用于演示)//A-B,B-C,C-A,转换为三相电压
 //
-// /* External outputs (root outports fed by signals with default storage) */
-// ExtY rtY;
+//         float omega = 2 * PI * 50 * t;
+//         sys_io.vabc[0] = sinf(omega);
+//         sys_io.vabc[1] = sinf(omega - TWO_PI_OVER_3);
+//         sys_io.vabc[2] = sinf(omega + TWO_PI_OVER_3);
+//         t += TS_PLL;
 //
-// /* Real-time model */
-// static RT_MODEL rtM_;
-// RT_MODEL *const rtM = &rtM_;
+//         // 执行系统主循环
+//         system_step();
 //
-// extern real_T rt_hypotd_snf(real_T u0, real_T u1);
-// static real_T rtGetNaN(void);
-// static real32_T rtGetNaNF(void);
-// extern real_T rtInf;
-// extern real_T rtMinusInf;
-// extern real_T rtNaN;
-// extern real32_T rtInfF;
-// extern real32_T rtMinusInfF;
-// extern real32_T rtNaNF;
-// static boolean_T rtIsInf(real_T value);
-// static boolean_T rtIsInfF(real32_T value);
-// static boolean_T rtIsNaN(real_T value);
-// static boolean_T rtIsNaNF(real32_T value);
-// real_T rtNaN = -(real_T)NAN;
-// real_T rtInf = (real_T)INFINITY;
-// real_T rtMinusInf = -(real_T)INFINITY;
-// real32_T rtNaNF = -(real32_T)NAN;
-// real32_T rtInfF = (real32_T)INFINITY;
-// real32_T rtMinusInfF = -(real32_T)INFINITY;
+//         // 此处可添加:
+//         // 1. 将sys_io.abc输出到PWM发生器
+//         // 2. 记录调试数据
+//         // 3. 等待下一个20kHz中断触发
+//     }
 //
-// /* Return rtNaN needed by the generated code. */
-// static real_T rtGetNaN(void)
-// {
-//   return rtNaN;
+//     return 0;
 // }
-//
-// /* Return rtNaNF needed by the generated code. */
-// static real32_T rtGetNaNF(void)
-// {
-//   return rtNaNF;
-// }
-//
-// /* Test if value is infinite */
-// static boolean_T rtIsInf(real_T value)
-// {
-//   return (boolean_T)isinf(value);
-// }
-//
-// /* Test if single-precision value is infinite */
-// static boolean_T rtIsInfF(real32_T value)
-// {
-//   return (boolean_T)isinf(value);
-// }
-//
-// /* Test if value is not a number */
-// static boolean_T rtIsNaN(real_T value)
-// {
-//   return (boolean_T)(isnan(value) != 0);
-// }
-//
-// /* Test if single-precision value is not a number */
-// static boolean_T rtIsNaNF(real32_T value)
-// {
-//   return (boolean_T)(isnan(value) != 0);
-// }
-// /*
-//  * 获取根号下（u0方+u1方）
-//  */
-// real_T rt_hypotd_snf(real_T u0, real_T u1)
-// {
-//   real_T a;
-//   real_T b;
-//   real_T y;
-//   real_T a_sqrt;
-//   real_T b_sqrt;
-//
-//   arm_abs_f32(&u0,&a,1);
-//   arm_abs_f32(&u1,&b,1);
-//
-//   // b = fabs(u1);
-//   if (a < b) {
-//     a /= b;
-//     arm_sqrt_f32((a*a+1.0f),&a_sqrt);
-//     y = a_sqrt * b;
-//     // y = sqrt(a * a + 1.0) * b;
-//   } else if (a > b) {
-//     b /= a;
-//     arm_sqrt_f32((b*b+1.0f),&b_sqrt);
-//     y = b_sqrt * a;
-//     // y = sqrt(b * b + 1.0) * a;
-//   } else if (rtIsNaN(b)) {
-//     y = (rtNaN);
-//   } else {
-//     y = a * 1.4142135623730951f;
-//   }
-//   return y;
-// }
-//
-// /* Model step function */
-// void dual_step(void)
-// {
-//   real_T rtb_Add;
-//   real_T rtb_Sum;
-//
-//   /* Sum: '<S1>/Add' incorporates:
-//    *  Fcn: '<S2>/alpha'
-//    *  Fcn: '<S2>/beta'
-//    *  Gain: '<S2>/K'
-//    *  Inport: '<Root>/Vabc'
-//    *  Inport: '<Root>/vref'
-//    *  Math: '<S1>/Hypot'
-//    */
-//   rtb_Add = rtU.output - rt_hypotd_snf(((rtU.Vabc[0] - 0.5f * rtU.Vabc[1]) - 0.5f *rtU.Vabc[2]) * 0.66666666666666663f,
-//                                             (rtU.Vabc[1] - rtU.Vabc[2]) *1.7320508075688772 / 2.0 * 0.66666666666666663);
-//
-//   /* Sum: '<S47>/Sum' incorporates:
-//    *  DiscreteIntegrator: '<S38>/Integrator'
-//    */
-//   rtb_Sum = rtb_Add + rtDW.Integrator_DSTATE;
-//
-//   /* Outport: '<Root>/abc' incorporates:
-//    *  Constant: '<S1>/Constant'
-//    *  Inport: '<Root>/theta'
-//    *  Product: '<S1>/Product'
-//    *  Sum: '<S1>/Add1'
-//    *  Trigonometry: '<S1>/Sin'
-//    */
-//   rtY.abc[0] = rtb_Sum * sin(rtU.theta);
-//   rtY.abc[1] = sin(rtU.theta - 2.0943951023931953f) * rtb_Sum;
-//   rtY.abc[2] = sin(rtU.theta + 2.0943951023931953f) * rtb_Sum;
-//
-//   /* Update for DiscreteIntegrator: '<S38>/Integrator' incorporates:
-//    *  Gain: '<S35>/Integral Gain'
-//    */
-//   rtDW.Integrator_DSTATE += 5.0f * rtb_Add * 0.0001f;
-// }
-//
-// /* Model initialize function */
-// void dual_initialize(void)
-// {
-//   /* (no initialization code required) */
-// }
-// ////////////func in main
-// ///
-// ///
-//
-// void rt_OneStep(void);
-// void rt_OneStep(void)
-// {
-//   static boolean_T OverrunFlag = false;
-//
-//   /* Disable interrupts here */
-//
-//   /* Check for overrun */
-//   if (OverrunFlag) {
-//     rtmSetErrorStatus(rtM, "Overrun");
-//     return;
-//   }
-//
-//   OverrunFlag = true;
-//
-//   /* Save FPU context here (if necessary) */
-//   /* Re-enable timer or interrupt here */
-//   /* Set model inputs here */
-//
-//   /* Step the model */
-//   dual_step();
-//
-//   /* Get model outputs here */
-//
-//   /* Indicate task complete */
-//   OverrunFlag = false;
-//
-//   /* Disable interrupts here */
-//   /* Restore FPU context here (if necessary) */
-//   /* Enable interrupts here */
-// }
-//
-// /*
-//  * The example main function illustrates what is required by your
-//  * application code to initialize, execute, and terminate the generated code.
-//  * Attaching rt_OneStep to a real-time clock is target specific. This example
-//  * illustrates how you do this relative to initializing the model.
-//  */
-// // int_T main(void)
-// // {
-// //   /* Initialize model */
-// //   dual_initialize();
-// //
-// //   /* Attach rt_OneStep to a timer or interrupt service routine with
-// //    * period 0.0001 seconds (base rate of the model) here.
-// //    * The call syntax for rt_OneStep is
-// //    *
-// //    *  rt_OneStep();//放在timer或者中断里面
-// //    */
-// //   return 0;
-// // }
-//
