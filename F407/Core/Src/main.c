@@ -256,7 +256,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 16;
+  hadc1.Init.NbrOfConversion = 15;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -268,7 +268,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -395,15 +395,6 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_15;
   sConfig.Rank = 15;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_VREFINT;
-  sConfig.Rank = 16;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -708,9 +699,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     // /* set pwm */
     // PID_Calc(&pid_control[0],dc_in_current);//example
 
-    Set_PWM_Duty(htim1,TIM_CHANNEL_1,100);
-    Set_PWM_Duty(htim1,TIM_CHANNEL_2,100);
-    Set_PWM_Duty(htim1,TIM_CHANNEL_3,100);
+    Set_PWM_Duty(htim1,TIM_CHANNEL_1,0);
+    Set_PWM_Duty(htim1,TIM_CHANNEL_2,0);
+    Set_PWM_Duty(htim1,TIM_CHANNEL_3,0);
   }
 
 }
@@ -738,6 +729,7 @@ static inline void ADC_convert(void)
   AC_IN.VOLTAGE_A = ((float)adc_dma_buffer[AC_IN_VOLTAGE_A] / 4095.0f) * VREF * 60 / adc_constant;
   AC_OUT.CURRENT_B = ((float)adc_dma_buffer[AC_OUT_CURRENT_B]/ - 2047.5f )/ 4095.0f *8.25f ;
   AC_OUT.VOLTAGE_A = ((float)adc_dma_buffer[AC_OUT_VOLTAGE_A]/ 4095.0f) * VREF * 60 / adc_constant;
+
   // sprintf(send,"adc1 = %d, adc2 = %d, adc3 = %d, adc4 = %d, adc5 = %d, adc6 = %d\n"
   // ,AC_OUT.CURRENT_A,AC_OUT.CURRENT_B,AC_OUT.CURRENT_C,AC_OUT.VOLTAGE_A,AC_OUT.VOLTAGE_B,AC_OUT.VOLTAGE_C);
   // HAL_UART_Transmit(&huart2,(uint8_t *)&send,strlen(send),HAL_MAX_DELAY);
