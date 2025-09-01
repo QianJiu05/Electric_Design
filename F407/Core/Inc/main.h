@@ -46,6 +46,7 @@ typedef struct TRIPLE_POWER {
   float VOLTAGE_B;
   float VOLTAGE_C;
 }triple_power;
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

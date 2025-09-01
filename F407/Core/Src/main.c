@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <malloc.h>
 
 #include "stm32f4xx_hal_adc.h"
 #include "dual_loop.h"
@@ -82,6 +83,7 @@ float rtY_freq_Hz;     // 输出: 频率 (Hz) - 镜像输入频率
 System_State sys_state;     // 系统状态
 System_IO sys_io;           // 系统输入输出
 VCO_State vco_state;   // 全局状态实例
+RMS_Calculator *rms_discretep;
 
 /* USER CODE END PV */
 
@@ -147,7 +149,6 @@ int main(void)
 
   vco_init();
   system_init();
-
   /*启动PWM输出*/
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1); // TIM1 CH1N互补
@@ -170,7 +171,6 @@ int main(void)
   // HAL_ADC_Start(&hadc2);
   // HAL_ADCEx_MultiModeStart_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
   HAL_ADC_Start_DMA(&hadc1, adc_dma_buffer, ADC_CHANNEL_NUM);
-
   // float test_arm = 10;
   // float test_math = 10;
   //
